@@ -123,7 +123,24 @@ proc ui::window::createMainWindow {} {
         -anchor w
 
     set ::modeLabel .root.sidebar.modeValue
+    #
+    # Mode Switch Button
+    #
 
+    button .root.sidebar.modeToggle \
+        -text "Switch to SELECT" \
+        -bg "#3a3a3a" \
+        -fg white \
+        -activebackground "#4cc2ff" \
+        -activeforeground black \
+        -relief flat \
+        -borderwidth 0 \
+        -command controller::toggleMode
+
+    pack .root.sidebar.modeToggle \
+        -fill x \
+        -padx 16 \
+        -pady {10 20}
     #
     # BGA Geometry Section
     #

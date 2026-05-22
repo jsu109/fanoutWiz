@@ -26,8 +26,6 @@ proc render::pads::drawPads {canvas pads bgaDef} {
                 -fill orange \
                 -outline {} \
                 -tags [list pad $padName]]
-
-                dict set pads $padName canvasId $itemId
             }
 
             square {
@@ -39,49 +37,28 @@ proc render::pads::drawPads {canvas pads bgaDef} {
                 -fill cyan \
                 -outline {} \
                 -tags [list pad $padName]]
-
-                
-                dict set pads $padName canvasId $itemId
             }     
         }
         
     }
     
-    return $pads
+    
 }
 proc render::pads::highlightPad {canvas padName} {
 
-    set pads $::model::pads
-    
-    if {![dict exists $pads $padName]} {
-        ui::status::set  "WARNING: pad not found: $padName"
-        return
+    # clear previous selection
+    foreach item [$canvas find withtag pad] {
+        $canvas itemconfigure $item -outline {} -width 1
     }
 
-    set padData [dict get $pads $padName]
-    set id [dict get $padData canvasId]
-
-    # reset all
-    dict for {name data} $pads {
-        if {[dict exists $data canvasId]} {
-            $canvas itemconfigure [dict get $data canvasId] -outline {}
-        }
+    # highlight selected pad using tag
+    foreach item [$canvas find withtag $padName] {
+        $canvas itemconfigure $item -outline red -width 2
     }
-
-    # highlight selected
-    $canvas itemconfigure $id \
-        -outline red \
-        -width 2
 }
 proc render::pads::clearSelection {canvas} {
 
-    set pads $::model::pads
-
-    dict for {name data} $pads {
-        if {[dict exists $data canvasId]} {
-            $canvas itemconfigure [dict get $data canvasId] \
-                -outline {} \
-                -width 1
-        }
+    foreach item [$canvas find withtag pad] {
+        $canvas itemconfigure $item -outline {} -width 1
     }
 }

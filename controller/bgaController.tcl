@@ -23,6 +23,23 @@ proc controller::setMode {mode} {
         .root.sidebar.modeValue configure -text "EDIT"
     }
 }
+proc controller::toggleMode {} {
+
+    if {$::model::mode eq "edit"} {
+
+        controller::applyAndEnableSelection
+
+        .root.sidebar.modeToggle configure -text "Switch to EDIT"
+
+    } else {
+
+        controller::setMode edit
+
+        .root.sidebar.modeToggle configure -text "Switch to SELECT"
+
+    }
+
+}
 
 proc controller::isEditMode {} {
     return [expr {$::model::mode eq "edit"}]
@@ -47,9 +64,9 @@ proc controller::build {} {
 
     set pads [model::bga::generatePads $::model::bga]
 
-    set ::model::pads $pads
+    
 
-    set ::model::pads [render::pads::drawPads $::render::canvas $::model::pads $::model::bga]
+    render::pads::drawPads $::render::canvas $pads $::model::bga
 
     ui::bindings::attachPadSelection $::render::canvas
 }
@@ -60,9 +77,10 @@ proc controller::applyAndEnableSelection {} {
 
     set ::model::bga [model::bga::createBGA $rows $cols]
 
-    controller::build
+    
 
-    controller::setMode select
+    # controller::setMode select
 
     ui::status::set "Selection enabled"
+    controller::build
 }
