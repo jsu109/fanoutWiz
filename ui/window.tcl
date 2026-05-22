@@ -188,7 +188,7 @@ proc ui::window::createMainWindow {} {
 
     scale .root.sidebar.geometry.rows.slider \
         -from 2 \
-        -to 32 \
+        -to 20 \
         -orient horizontal \
         -showvalue 0 \
         -length 180 \
@@ -236,7 +236,7 @@ proc ui::window::createMainWindow {} {
 
     scale .root.sidebar.geometry.cols.slider \
         -from 2 \
-        -to 32 \
+        -to 20 \
         -orient horizontal \
         -showvalue 0 \
         -length 180 \

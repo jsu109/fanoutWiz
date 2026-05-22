@@ -9,20 +9,20 @@ proc render::pads::drawPads {canvas pads bgaDef} {
     set radius [dict get $bgaDef padRadius]
 
     dict for {padName padData} $pads {
-
-        set x [dict get $padData x]
-        set y [dict get $padData y]
-
+        
+        set sx [expr {[dict get $padData x] * $::view::scale + $::view::offsetX}]
+        set sy [expr {[dict get $padData y] * $::view::scale + $::view::offsetY}]
+        set sr [expr {$radius * $::view::scale}]
         set padType [dict get $padData type]
 
         switch -- $padType {
 
             circle {
                 set itemId [$canvas create oval \
-                [expr {$x - $radius}] \
-                [expr {$y - $radius}] \
-                [expr {$x + $radius}] \
-                [expr {$y + $radius}] \
+                [expr {$sx - $sr}] \
+                [expr {$sy - $sr}] \
+                [expr {$sx + $sr}] \
+                [expr {$sy + $sr}] \
                 -fill orange \
                 -outline {} \
                 -tags [list pad $padName]]
@@ -30,10 +30,10 @@ proc render::pads::drawPads {canvas pads bgaDef} {
 
             square {
                 set itemId [$canvas create rectangle \
-                [expr {$x - $radius}] \
-                [expr {$y - $radius}] \
-                [expr {$x + $radius}] \
-                [expr {$y + $radius}] \
+                [expr {$sx - $sr}] \
+                [expr {$sy - $sr}] \
+                [expr {$sx + $sr}] \
+                [expr {$sy + $sr}] \
                 -fill cyan \
                 -outline {} \
                 -tags [list pad $padName]]
@@ -53,7 +53,7 @@ proc render::pads::highlightPad {canvas padName} {
 
     # highlight selected pad using tag
     foreach item [$canvas find withtag $padName] {
-        $canvas itemconfigure $item -outline red -width 2
+        $canvas itemconfigure $item -outline red -width [expr {(2 * $::view::scale)}]
     }
 }
 proc render::pads::clearSelection {canvas} {
