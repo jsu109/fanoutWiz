@@ -1,63 +1,282 @@
 namespace eval ui::window {}
-    proc ui::window::createMainWindow {} {
+
+proc ui::window::createMainWindow {} {
 
     wm title . "Fanout Visualizer"
+    wm geometry . 1400x900
+    wm minsize . 1000 700
 
-    set canvas [canvas .c \
-        -width 1200 \
-        -height 800 \
-        -bg "#1e1e1e"]
+    #
+    # Root Layout
+    #
 
-    $canvas create rectangle 0 0 5000 5000 \
+    frame .root -bg "#1e1e1e"
+    pack .root -fill both -expand 1
+
+    #
+    # Sidebar
+    #
+
+    frame .root.sidebar \
+        -bg "#252526" \
+        -width 280
+
+    pack .root.sidebar \
+        -side left \
+        -fill y
+
+    pack propagate .root.sidebar 0
+
+    #
+    # Canvas Area
+    #
+
+    frame .root.workspace \
+        -bg "#1e1e1e"
+
+    pack .root.workspace \
+        -side right \
+        -fill both \
+        -expand 1
+
+    #
+    # Canvas
+    #
+
+    set canvas [canvas .root.workspace.c \
+        -bg "#1e1e1e" \
+        -highlightthickness 0]
+
+    pack .root.workspace.c \
+        -fill both \
+        -expand 1
+
+    #
+    # Background click catcher
+    #
+
+    $canvas create rectangle \
+        0 0 5000 5000 \
         -fill "" \
         -outline "" \
         -tags background
 
-    pack .c -fill both -expand 1
-    
-    label .status -text "Ready" -anchor w -bg "#222" -fg white
-    pack .status -fill x -side bottom
+    #
+    # Status Bar
+    #
+
+    label .status \
+        -text "Ready" \
+        -anchor w \
+        -bg "#222" \
+        -fg "#d4d4d4" \
+        -padx 10
+
+    pack .status \
+        -side bottom \
+        -fill x
+
     set ::statusLabel .status
 
-    frame .controls
-    place .controls -relx 0.02 -rely 0.02
+    #
+    # Sidebar Title
+    #
 
-    label .controls.l1 -text "Rows" -bg "#222" -fg white
-    scale .controls.rows \
-        -from 2 -to 32 \
-        -orient horizontal \
-        -length 200 \
-        -bg "#222" \
+    label .root.sidebar.title \
+        -text "Fanout Wiz" \
+        -bg "#252526" \
         -fg white \
-        -troughcolor "#444"
+        -font {Helvetica 18 bold}
 
-    .controls.rows set 10
+    pack .root.sidebar.title \
+        -anchor w \
+        -padx 16 \
+        -pady {16 20}
 
-    label .controls.l2 -text "Cols" -bg "#222" -fg white
-    scale .controls.cols \
-        -from 2 -to 32 \
-        -orient horizontal \
-        -length 200 \
-        -bg "#222" \
+    #
+    # Mode Indicator
+    #
+
+    frame .root.sidebar.modeFrame \
+        -bg "#252526"
+
+    pack .root.sidebar.modeFrame \
+        -fill x \
+        -padx 16 \
+        -pady {0 20}
+
+    label .root.sidebar.modeLabel \
+        -text "MODE" \
+        -bg "#252526" \
+        -fg "#888"
+
+    label .root.sidebar.modeValue \
+        -text "EDIT" \
+        -bg "#252526" \
+        -fg "#4cc2ff" \
+        -font {Helvetica 12 bold}
+
+    pack .root.sidebar.modeLabel \
+        -anchor w
+
+    pack .root.sidebar.modeValue \
+        -anchor w
+
+    set ::modeLabel .root.sidebar.modeValue
+
+    #
+    # BGA Geometry Section
+    #
+
+    frame .root.sidebar.geometry \
+        -bg "#2d2d30"
+
+    pack .root.sidebar.geometry \
+        -fill x \
+        -padx 12 \
+        -pady 8
+
+    label .root.sidebar.geometry.title \
+        -text "BGA Geometry" \
+        -bg "#2d2d30" \
         -fg white \
-        -troughcolor "#444"
+        -font {Helvetica 11 bold}
 
-    .controls.cols set 10
+    pack .root.sidebar.geometry.title \
+        -anchor w \
+        -padx 12 \
+        -pady {10 16}
 
-    pack .controls.l1 .controls.rows \
-    .controls.l2 .controls.cols \
-    -side top -anchor w
+    #
+    # Rows Control
+    #
 
-    bind .controls.rows <Motion> {controller::applyBGA}
-    bind .controls.cols <Motion> {controller::applyBGA}
-    
-    button .controls.apply -text "Apply BGA" \
-    -bg "#4cc2ff" \
-    -fg black \
-    -activebackground "#66d9ff" \
-    -command controller::applyAndEnableSelection
+    frame .root.sidebar.geometry.rows \
+        -bg "#2d2d30"
 
-    pack .controls.apply -side top -fill x -pady 6
-    return .c
+    pack .root.sidebar.geometry.rows \
+        -fill x \
+        -padx 12 \
+        -pady 6
+
+    label .root.sidebar.geometry.rows.label \
+        -text "Rows" \
+        -bg "#2d2d30" \
+        -fg "#cccccc"
+
+    label .root.sidebar.geometry.rows.value \
+        -text "10" \
+        -bg "#2d2d30" \
+        -fg "#4cc2ff"
+
+    scale .root.sidebar.geometry.rows.slider \
+        -from 2 \
+        -to 32 \
+        -orient horizontal \
+        -showvalue 0 \
+        -length 180 \
+        -bg "#2d2d30" \
+        -fg white \
+        -troughcolor "#3c3c3c" \
+        -activebackground "#4cc2ff" \
+        -highlightthickness 0 \
+        -borderwidth 0
+
+    .root.sidebar.geometry.rows.slider set 10
+
+    pack .root.sidebar.geometry.rows.label \
+        -side left
+
+    pack .root.sidebar.geometry.rows.value \
+        -side right
+
+    pack .root.sidebar.geometry.rows.slider \
+        -side bottom \
+        -fill x \
+        -pady {6 0}
+
+    #
+    # Cols Control
+    #
+
+    frame .root.sidebar.geometry.cols \
+        -bg "#2d2d30"
+
+    pack .root.sidebar.geometry.cols \
+        -fill x \
+        -padx 12 \
+        -pady 6
+
+    label .root.sidebar.geometry.cols.label \
+        -text "Cols" \
+        -bg "#2d2d30" \
+        -fg "#cccccc"
+
+    label .root.sidebar.geometry.cols.value \
+        -text "10" \
+        -bg "#2d2d30" \
+        -fg "#4cc2ff"
+
+    scale .root.sidebar.geometry.cols.slider \
+        -from 2 \
+        -to 32 \
+        -orient horizontal \
+        -showvalue 0 \
+        -length 180 \
+        -bg "#2d2d30" \
+        -fg white \
+        -troughcolor "#3c3c3c" \
+        -activebackground "#4cc2ff" \
+        -highlightthickness 0 \
+        -borderwidth 0
+
+    .root.sidebar.geometry.cols.slider set 10
+
+    pack .root.sidebar.geometry.cols.label \
+        -side left
+
+    pack .root.sidebar.geometry.cols.value \
+        -side right
+
+    pack .root.sidebar.geometry.cols.slider \
+        -side bottom \
+        -fill x \
+        -pady {6 0}
+
+    #
+    # Slider Value Updates
+    #
+
+    bind .root.sidebar.geometry.rows.slider <Motion> {
+        .root.sidebar.geometry.rows.value configure \
+            -text [.root.sidebar.geometry.rows.slider get]
     }
 
+    bind .root.sidebar.geometry.cols.slider <Motion> {
+        .root.sidebar.geometry.cols.value configure \
+            -text [.root.sidebar.geometry.cols.slider get]
+    }
+
+    #
+    # Apply Button
+    #
+
+    button .root.sidebar.apply \
+        -text "Apply Changes" \
+        -bg "#4cc2ff" \
+        -fg black \
+        -activebackground "#66d9ff" \
+        -activeforeground black \
+        -relief flat \
+        -borderwidth 0 \
+        -padx 10 \
+        -pady 10 \
+        -command controller::applyAndEnableSelection
+
+    pack .root.sidebar.apply \
+        -fill x \
+        -padx 16 \
+        -pady {20 10}
+
+    return .root.workspace.c
+}
