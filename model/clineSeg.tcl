@@ -17,11 +17,12 @@ namespace eval model::clineSeg {}
 
 proc model::clineSeg::createSeg {} {
     return [dict create \
-    width 20 \
-    length 100\
+    width [units::mm 0.1] \
+    length [units::mm 1]\
     angle 45\
     ]
 }
+
 
 
 proc model::clineSeg::generateSegs {segDef} {

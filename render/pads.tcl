@@ -10,9 +10,9 @@ proc render::pads::drawPads {canvas pads bgaDef} {
 
     dict for {padName padData} $pads {
         
-        set sx [expr {[dict get $padData x] * $::view::scale + $::view::offsetX}]
-        set sy [expr {[dict get $padData y] * $::view::scale + $::view::offsetY}]
-        set sr [expr {$radius * $::view::scale}]
+        set sx [expr {[dict get $padData x] * $::view::scale * $::render::unitConversion + $::view::offsetX}]
+        set sy [expr {[dict get $padData y] * $::view::scale * $::render::unitConversion + $::view::offsetY}]
+        set sr [expr {$radius * $::view::scale * $::render::unitConversion}]
         set padType [dict get $padData type]
 
         switch -- $padType {
@@ -53,7 +53,7 @@ proc render::pads::highlightPad {canvas padName} {
 
     # highlight selected pad using tag
     foreach item [$canvas find withtag $padName] {
-        $canvas itemconfigure $item -outline red -width [expr {(2 * $::view::scale)}]
+        $canvas itemconfigure $item -outline red -width [expr {(2 * $::view::scale * $::render::unitConversion)}]
     }
 }
 proc render::pads::clearSelection {canvas} {

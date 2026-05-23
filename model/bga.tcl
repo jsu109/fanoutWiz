@@ -5,8 +5,8 @@ proc model::bga::createBGA {{rows 5} {cols 5}} {
     return [dict create \
     rows $rows \
     cols $cols \
-    pitch 50 \
-    padRadius 8 \
+    pitch [units::mm 1] \
+    padRadius [units::um 50] \
     defaultPadType circle]
     
 }
@@ -41,6 +41,5 @@ proc model::bga::generatePads {bgaDef} {
             dict set pads $padName type $defaultPadType
         }
     }
-
     return $pads
 }

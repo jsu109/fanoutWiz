@@ -1,62 +1,78 @@
-# * routing logic
-# * escape calculations
-# * via insertion
-# * congestion analysis
-
 namespace eval model::fanoutCompiler {}
+
 proc model::fanoutCompiler::compile {fanout} {
 
     set segments {}
-
+    
     set pads [dict get $fanout pads]
 
-    foreach padId [dict keys $pads] {
+    # -------------------------------------------------
+    # fallback parameters (can later come from BGA config)
+    # -------------------------------------------------
+    set defaultLength [units::mm 10]  ;# µm (safe starter escape distance)
+    set width [units::mm 0.1]
 
+    foreach padId [dict keys $pads] {
+        
         set p [dict get $pads $padId]
 
+        # -------------------------
+        # pad geometry (µm)
+        # -------------------------
         set x [dict get $p position x]
         set y [dict get $p position y]
 
         set dir [dict get $p escape direction]
 
-        # ---------------------------------------
-        # SINGLE SEGMENT PER PAD
-        # ---------------------------------------
-
-        set length 1.0
-        set width 1
-
-        # direction vector (simple orthogonal escape)
+        # -------------------------
+        # direction → vector
+        # -------------------------
         set dx 0
         set dy 0
 
-        if {$dir eq "N"} { set dy $length }
-        if {$dir eq "S"} { set dy [expr {-1 * $length}] }
-        if {$dir eq "E"} { set dx $length }
-        if {$dir eq "W"} { set dx [expr {-1 * $length}] }
+        switch $dir {
+            "N" { set dx 0;  set dy 1 }
+            "S" { set dx 0;  set dy -1 }
+            "E" { set dx 1;  set dy 0 }
+            "W" { set dx -1; set dy 0 }
+            default { set dx 0; set dy 1 }
+        }
 
-        set x2 [expr {$x + $dx}]
-        set y2 [expr {$y + $dy}]
+        # -------------------------
+        # length model (can evolve later)
+        # -------------------------
+        set length $defaultLength
 
-        # build segment via clineSeg generator
-        set segDef [dict create \
+        # -------------------------
+        # compute geometry
+        # -------------------------
+        set x2 [expr {$x + $dx * $length}]
+        set y2 [expr {$y + $dy * $length}]
+
+        # -------------------------
+        # build segment IR (NO clineSeg dependency)
+        # -------------------------
+        set seg1 [dict create \
+            id seg1 \
             width $width \
             length $length \
             angle 0 \
+            geometry [dict create \
+                x1 $x y1 $y \
+                x2 $x2 y2 $y2 \
+            ] \
+            nodes [dict create \
+                from $padId \
+                to "$padId.exit" \
+            ] \
         ]
 
-        set seg [model::clineSeg::generateSegs $segDef]
-
-        # override geometry with REAL pad-based origin
-        dict set seg seg1 geometry x1 $x
-        dict set seg seg1 geometry y1 $y
-        dict set seg seg1 geometry x2 $x2
-        dict set seg seg1 geometry y2 $y2
-
-        dict set seg seg1 nodes from "$padId"
-        dict set seg seg1 nodes to   "$padId.exit"
-
-        dict set segments $padId $seg seg1
+        # -------------------------
+        # attach to output
+        # -------------------------
+        dict set segments $padId seg1 $seg1
+        
+        
     }
 
     return [dict create segments $segments]
