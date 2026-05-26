@@ -63,7 +63,7 @@ proc controller::collectFrame {} {
     set seg $::model::clineSeg
 
     set pads [model::bga::generatePads $bga]
-    set fanout [model::fanout::createFanout $pads "N"] 
+    set fanout [model::fanout::createFanout $bga "N"] 
 
     set segs [model::fanoutCompiler::compile $fanout]
     

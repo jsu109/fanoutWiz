@@ -9,7 +9,7 @@ proc model::fanoutCompiler::compile {fanout} {
     # -------------------------------------------------
     # fallback parameters (can later come from BGA config)
     # -------------------------------------------------
-    set defaultLength [units::mm 10]  ;# µm (safe starter escape distance)
+    set defaultLength [units::mm 0.5]  ;# µm (safe starter escape distance)
     set width [units::mm 0.1]
 
     foreach padId [dict keys $pads] {
@@ -37,7 +37,7 @@ proc model::fanoutCompiler::compile {fanout} {
             "W" { set dx -1; set dy 0 }
             default { set dx 0; set dy 1 }
         }
-
+        puts $p 
         # -------------------------
         # length model (can evolve later)
         # -------------------------
@@ -66,7 +66,6 @@ proc model::fanoutCompiler::compile {fanout} {
                 to "$padId.exit" \
             ] \
         ]
-
         # -------------------------
         # attach to output
         # -------------------------

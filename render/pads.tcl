@@ -53,7 +53,7 @@ proc render::pads::highlightPad {canvas padName} {
 
     # highlight selected pad using tag
     foreach item [$canvas find withtag $padName] {
-        $canvas itemconfigure $item -outline red -width [expr {(2 * $::view::scale * $::render::unitConversion)}]
+        $canvas itemconfigure $item -outline red -width [expr {(10 * $::view::scale * $::render::unitConversion)}]
     }
 }
 proc render::pads::clearSelection {canvas} {

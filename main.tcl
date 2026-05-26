@@ -4,6 +4,7 @@ source model/bga.tcl
 source model/clineSeg.tcl
 source model/fanout.tcl
 source model/fanoutCompiler.tcl
+source model/topology.tcl
 source render/pads.tcl
 source render/clineSeg.tcl
 source render/fanout.tcl

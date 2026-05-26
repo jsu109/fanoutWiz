@@ -182,7 +182,7 @@ proc ui::window::createMainWindow {} {
         -fg "#cccccc"
 
     label .root.sidebar.geometry.rows.value \
-        -text "10" \
+        -text "3" \
         -bg "#2d2d30" \
         -fg "#4cc2ff"
 
@@ -199,7 +199,7 @@ proc ui::window::createMainWindow {} {
         -highlightthickness 0 \
         -borderwidth 0
 
-    .root.sidebar.geometry.rows.slider set 10
+    .root.sidebar.geometry.rows.slider set 3
 
     pack .root.sidebar.geometry.rows.label \
         -side left
@@ -230,7 +230,7 @@ proc ui::window::createMainWindow {} {
         -fg "#cccccc"
 
     label .root.sidebar.geometry.cols.value \
-        -text "10" \
+        -text "3" \
         -bg "#2d2d30" \
         -fg "#4cc2ff"
 
@@ -247,7 +247,7 @@ proc ui::window::createMainWindow {} {
         -highlightthickness 0 \
         -borderwidth 0
 
-    .root.sidebar.geometry.cols.slider set 10
+    .root.sidebar.geometry.cols.slider set 3
 
     pack .root.sidebar.geometry.cols.label \
         -side left

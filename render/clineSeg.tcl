@@ -5,7 +5,7 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
     # -----------------------------
     # styling defaults
     # -----------------------------
-    set color "#00ffcc"
+    set color "#035efc"
     set width [units::mm 0.1]
 
     if {[dict exists $frame color]} {

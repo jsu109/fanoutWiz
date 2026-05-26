@@ -6,7 +6,7 @@ proc model::bga::createBGA {{rows 5} {cols 5}} {
     rows $rows \
     cols $cols \
     pitch [units::mm 1] \
-    padRadius [units::um 50] \
+    padRadius [units::um 100] \
     defaultPadType circle]
     
 }
