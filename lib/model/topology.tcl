@@ -1,14 +1,23 @@
 namespace eval model::topology {}
 
+
 proc model::topology::getTopologyProc {structure} {
 
     dict get {
         orthogonal model::topology::orthogonalEscape
         diagonal   model::topology::diagonalEscape
-        dogbone  model::topology::dogboneEscape
         NSEW  model::topology::NSEW
     } $structure
 }
+proc model::topology::getStructure {name} {
+
+    if {![info exists ::fanout::structures::registry($name)]} {
+        error "Unknown structure: $name (available: [array names ::fanout::structures::registry])"
+    }
+
+    return $::fanout::structures::registry($name)
+}
+
 proc model::topology::classifyPad {padId bga} {
     set rows [dict get $bga rows]
     set cols [dict get $bga cols]
@@ -22,6 +31,7 @@ proc model::topology::classifyPad {padId bga} {
     set dRow [expr {$padRow - $centerRow}]
     set dCol [expr {$padCol - $centerCol}]
     
+    set ringDepth [expr {max(abs($dRow), abs($dCol))}]
     
     # NW dRow <0, dCol <0
     # NE dRow <0, dCol >0
@@ -40,7 +50,7 @@ proc model::topology::classifyPad {padId bga} {
     }
     if {abs($dRow) < 0.5 && abs($dCol) < 0.5} {
     set quadrant CENTER
-}
+    }
 
     # Determine edge (logic assumes row/col 0th start index). 
 
@@ -61,8 +71,10 @@ proc model::topology::classifyPad {padId bga} {
                         col $padCol \
                         dRow $dRow \
                         dCol $dCol \
+                        ringDepth $ringDepth\
                         quadrant $quadrant \
-                        edge $edgeSide]
+                        edge $edgeSide]\
+                        
     return $padContext
     
 }
@@ -76,19 +88,27 @@ proc model::topology::orthogonalEscape {padContext} {
     #   - routing class
     #   - preferred escape direction
     #   - topology parameters
+    
+    # length = neckoutDistance
+    # offset = laneIndex * lanePitch
+
     puts $padContext
+
     
 }
 
-proc model::topology::applyClineToPad {padId bga structure} {
+proc model::topology::applyClineToPad {padId bga structrueName} {
 
     # TODO: create a Cline object which is defined by a list/dict
     # ClineSegs with a defined Width, length, angle. based on the required
     # structure, bga size and pin location. 
-    set topologyProc [model::topology::getTopologyProc $structure]
+    
+    # set topologyProc [model::topology::getTopologyProc $structrueName]
+    set structureDef [model::topology::getStructure $structrueName]
+    puts $structureDef
     set padContext [model::topology::classifyPad $padId $bga]
 
-    return [$topologyProc $padContext]
+    # return [$topologyProc $padContext]
 
 }
 

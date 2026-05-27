@@ -4,6 +4,8 @@ lappend auto_path ./lib
 package require fanout::model
 package require fanout::render
 
+source lib/structures/structures.tcl
+
 source ui/window.tcl
 source ui/status.tcl
 source ui/bindings.tcl

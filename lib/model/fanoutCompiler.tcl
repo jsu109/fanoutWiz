@@ -22,7 +22,7 @@ proc model::fanoutCompiler::compile {fanout} {
         set x [dict get $p position x]
         set y [dict get $p position y]
 
-        set dir [dict get $p escape direction]
+        
 
         # -------------------------
         # direction → vector
@@ -30,14 +30,6 @@ proc model::fanoutCompiler::compile {fanout} {
         set dx 0
         set dy 0
 
-        switch $dir {
-            "N" { set dx 0;  set dy 1 }
-            "S" { set dx 0;  set dy -1 }
-            "E" { set dx 1;  set dy 0 }
-            "W" { set dx -1; set dy 0 }
-            default { set dx 0; set dy 1 }
-        }
-        puts $p 
         # -------------------------
         # length model (can evolve later)
         # -------------------------
