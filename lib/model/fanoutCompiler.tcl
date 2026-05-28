@@ -2,10 +2,10 @@ namespace eval model::fanoutCompiler {}
 
 proc model::fanoutCompiler::compile {fanout} {
 
-    set segments {}
     
+    set segments {}
     set pads [dict get $fanout pads]
-
+    
     # -------------------------------------------------
     # fallback parameters (can later come from BGA config)
     # -------------------------------------------------
@@ -15,55 +15,49 @@ proc model::fanoutCompiler::compile {fanout} {
     foreach padId [dict keys $pads] {
         
         set p [dict get $pads $padId]
-
+        
         # -------------------------
         # pad geometry (µm)
         # -------------------------
         set x [dict get $p position x]
         set y [dict get $p position y]
 
-        
+        set clines [dict get $p clines]
 
-        # -------------------------
-        # direction → vector
-        # -------------------------
-        set dx 0
-        set dy 0
+        # unwrap canonical structure
+        if {[dict exists $clines segments]} {
+            set clines [dict get $clines segments]
+        }
 
-        # -------------------------
-        # length model (can evolve later)
-        # -------------------------
-        set length $defaultLength
+        dict for {segName segData} $clines {
 
-        # -------------------------
-        # compute geometry
-        # -------------------------
-        set x2 [expr {$x + $dx * $length}]
-        set y2 [expr {$y + $dy * $length}]
+            # normalize segment format (support evolving IR shapes)
+            if {[dict exists $segData geometry]} {
+                set geometry [dict get $segData geometry]
+            } else {
+                set geometry $segData
+            }
 
-        # -------------------------
-        # build segment IR (NO clineSeg dependency)
-        # -------------------------
-        set seg1 [dict create \
-            id seg1 \
-            width $width \
-            length $length \
-            angle 0 \
-            geometry [dict create \
-                x1 $x y1 $y \
-                x2 $x2 y2 $y2 \
-            ] \
-            nodes [dict create \
-                from $padId \
-                to "$padId.exit" \
-            ] \
-        ]
-        # -------------------------
-        # attach to output
-        # -------------------------
-        dict set segments $padId seg1 $seg1
-        
-        
+            # validate geometry
+            if {![dict exists $geometry x1] || ![dict exists $geometry x2]} {
+                puts "WARN: invalid cline geometry for pad $padId seg $segName -> $segData"
+                continue
+            }
+
+            set seg [dict create \
+                id $segName \
+                width $width \
+                length $defaultLength \
+                angle 0 \
+                geometry $geometry \
+                nodes [dict create \
+                    from $padId \
+                    to "$padId.exit" \
+                ] \
+            ]
+
+            dict set segments $padId $segName $seg
+        }       
     }
 
     return [dict create segments $segments]

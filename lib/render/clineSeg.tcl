@@ -1,7 +1,7 @@
 namespace eval render::clineSeg {}
 
 proc render::clineSeg::drawClineSegs {canvas frame} {
-
+    
     # -----------------------------
     # styling defaults
     # -----------------------------
@@ -25,7 +25,6 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
     }
     puts "frame Keys: [dict keys $frame]"
     set segs [dict get $frame segs]
-    set segs [dict get $segs segments]
     
     # -----------------------------
     # view transform
@@ -46,41 +45,73 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
         set oy $::view::offsetY
     }
 
-    # -----------------------------
-    # iterate PAD → SEG → GEOM
-    # -----------------------------
-    dict for {padId padSegs} $segs {
-        # puts "padID $padId, padSegs $padSegs"
-        foreach segKey [dict keys $padSegs] {
-            
-            set segData [dict get $padSegs $segKey]
-            set width [expr {[dict get $segData width] * $::view::scale}]
-            if {![dict exists $segData geometry]} {
-                continue
+    dict for {padId padClines} $segs {
+
+        # -----------------------------
+        # robust normalization
+        # -----------------------------
+        set segDict $padClines
+
+        # unwrap: padClines {segments {...}}
+        if {[dict exists $segDict segments]} {
+            set maybe [dict get $segDict segments]
+
+            # if this is the real segment container (neck/escape), unwrap it
+            if {[dict exists $maybe neck] || [dict exists $maybe escape]} {
+                set segDict $maybe
+            } else {
+                set segDict $maybe
             }
+        }
 
-            set geom [dict get $segData geometry]
+        dict for {segKey segData} $segDict {
 
-            set x1 [dict get $geom x1]
-            set y1 [dict get $geom y1]
-            set x2 [dict get $geom x2]
-            set y2 [dict get $geom y2]
 
-            # -------------------------
-            # transform (world → canvas)
-            # -------------------------
-            set x1 [expr {$x1 * $scale + $ox}]
-            set y1 [expr {$y1 * $scale + $oy}]
-            set x2 [expr {$x2 * $scale + $ox}]
-            set y2 [expr {$y2 * $scale + $oy}]
+            # -----------------------------
+            # extract geometry (robust IR handling)
+            # -----------------------------
+            dict for {key data} $segData {
+            
 
-            # -------------------------
-            # draw
-            # -------------------------
-            $canvas create line \
-                $x1 $y1 $x2 $y2 \
-                -fill $color \
-                -width $width
+                if {[dict exists $data geometry]} {
+                    set geom [dict get $data geometry]
+                } else {
+                    set geom $data
+                }
+                puts $geom
+
+                # validate geometry
+                if {![dict exists $geom x1] || ![dict exists $geom x2]} {
+                    puts "WARN: skipping invalid segment in $padId -> $segKey : $segData"
+                    continue
+                }
+
+                set x1 [dict get $geom x1]
+                set y1 [dict get $geom y1]
+                set x2 [dict get $geom x2]
+                set y2 [dict get $geom y2]
+
+                # -----------------------------
+                # transform
+                # -----------------------------
+                set x1 [expr {$x1 * $scale + $ox}]
+                set y1 [expr {$y1 * $scale + $oy}]
+                set x2 [expr {$x2 * $scale + $ox}]
+                set y2 [expr {$y2 * $scale + $oy}]
+
+                # -----------------------------
+                # draw
+                # -----------------------------
+                set segWidth $width
+                if {[dict exists $data width]} {
+                    set segWidth [expr {[dict get $data width] * $scale}]
+                }
+
+                $canvas create line \
+                    $x1 $y1 $x2 $y2 \
+                    -fill $color \
+                    -width $segWidth
+            }
         }
     }
 }

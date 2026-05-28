@@ -26,8 +26,8 @@ proc model::fanout::createFanout {bga directionSeed} {
         dict set fanoutPads $padId row $row
         dict set fanoutPads $padId col $col
         dict set fanoutPads $padId position [dict create x $x y $y]
-        # dict set fanoutPads $padId clines $padClines
+        dict set fanoutPads $padId clines $padClines
     }
-    
+
     return [dict create pads $fanoutPads]
 }
