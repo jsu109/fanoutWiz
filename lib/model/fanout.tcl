@@ -10,6 +10,8 @@ proc model::fanout::resolveStructureName {structureName} {
 
 proc model::fanout::createFanout {bga {structureName basic}} {
     set structureName [model::fanout::resolveStructureName $structureName]
+    set bgaRules [model::bga::deriveRules $bga]
+    set structure [model::topology::getStructure $structureName]
     set pads [model::bga::generatePads $bga]
     set fanoutPads {}
     
@@ -26,6 +28,7 @@ proc model::fanout::createFanout {bga {structureName basic}} {
         set row [dict get $id row]
         set col [dict get $id col]
         set padClines [model::topology::applyClineToPad $padId $id $bga $structureName]
+        set via [model::via::createForPad $padId $padClines $structureName]
     
         # ---------------------------------------
         # BUILD FANOUT IR
@@ -34,6 +37,7 @@ proc model::fanout::createFanout {bga {structureName basic}} {
         dict set fanoutPads $padId col $col
         dict set fanoutPads $padId position [dict create x $x y $y]
         dict set fanoutPads $padId clines $padClines
+        dict set fanoutPads $padId via $via
     }
 
     return [dict create \
@@ -42,6 +46,12 @@ proc model::fanout::createFanout {bga {structureName basic}} {
             rows [dict get $bga rows] \
             cols [dict get $bga cols] \
             pitch [dict get $bga pitch] \
-            padRadius [dict get $bga padRadius]] \
+            ballDiameter [dict get $bga ballDiameter] \
+            padScale [dict get $bga padScale] \
+            padDiameter [dict get $bga padDiameter] \
+            padRadius [dict get $bga padRadius] \
+            rules $bgaRules] \
+        routingRules [dict get $structure rules] \
+        viaDefinition [dict get $structure via] \
         pads $fanoutPads]
 }

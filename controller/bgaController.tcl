@@ -66,7 +66,7 @@ proc controller::collectFrame {} {
     set fanout [model::fanout::createFanout $bga basic] 
 
     set segs [model::fanoutCompiler::compile $fanout]
-    
+    set vias [model::via::collectFromFanout $fanout]
     set cols [dict get $bga cols]
     set rows [dict get $bga rows]
     set pitch [dict get $bga pitch]
@@ -81,6 +81,7 @@ proc controller::collectFrame {} {
     return [dict create \
         pads $pads \
         segs $segs \
+        vias $vias \
         worldW $worldW \
         worldH $worldH]
 }

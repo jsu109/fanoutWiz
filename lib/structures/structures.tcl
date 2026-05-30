@@ -15,11 +15,15 @@ set fanout::structures::registry(basic) [dict create \
         escapeUnusedPads no \
     ] \
     rules [dict create \
-        clineWidth [units::mm 0.1] \
-        clineSpacing [units::um 100] \
+        traceWidth [units::mil 5] \
+        traceSpacing [units::mil 6] \
+        clearance [units::mil 6] \
         neckLength [units::um 100] \
-        lanePitch [units::um 400] \
-        clearance [units::um 100] \
+    ] \
+    via [dict create \
+        type through \
+        holeDiameter [units::mil 8] \
+        annularRing [units::mil 6] \
     ] \
     segments {neck escape} \
     pipeline [dict create \

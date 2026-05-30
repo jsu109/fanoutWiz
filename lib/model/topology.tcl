@@ -218,8 +218,11 @@ proc model::topology::compileEscapePlan {padName pad padContext structure escape
     # --------------------
     # LANE OFFSET (simple model)
     # --------------------
-    set lanebgaPitch [dict get $structure rules lanePitch]
-    set offset [expr {($laneId + 1) * $lanebgaPitch}]
+    set lanePitch [expr {
+        [dict get $structure rules traceWidth] +
+        [dict get $structure rules traceSpacing]
+    }]
+    set offset [expr {($laneId + 1) * $lanePitch}]
 
     # --------------------
     # ESCAPE segment
@@ -261,7 +264,7 @@ proc model::topology::compileEscapePlan {padName pad padContext structure escape
         side $side \
         laneId $laneId \
         structure $structureName \
-        clineWidth [dict get $structure rules clineWidth] \
+        clineWidth [dict get $structure rules traceWidth] \
     ]
 
     return [dict create \

@@ -41,6 +41,38 @@ test fanout-ir-1.2 {fanout records selected structure and BGA dimensions} -body 
         [dict get $fanout bga pitch]
 } -result {basic 3 4 1000.0}
 
+test bga-rules-1.1 {BGA owns package geometry only} -body {
+    set bga [model::bga::createBGA 3 3]
+
+    list \
+        [lsort [dict keys $bga]] \
+        [dict get $bga ballDiameter] \
+        [dict get $bga padDiameter] \
+        [dict get $bga padRadius]
+} -result {{ballDiameter cols defaultPadType padDiameter padRadius padScale pitch rows} 500.0 400.0 200.0}
+
+test bga-rules-1.2 {BGA overrides are package parameters only} -body {
+    set bga [model::bga::createBGA 3 3 [dict create \
+        pitch [units::mm 0.8] \
+        ballDiameter [units::mm 0.4]]]
+    set rules [model::bga::deriveRules $bga]
+
+    list \
+        [dict get $bga padDiameter] \
+        [dict get $rules channelWidth] \
+        [expr {round([dict get $rules availableDiagonalSpace])}]
+} -result {320.0 480.0 811}
+
+test bga-rules-1.3 {fanout carries BGA facts separately from routing rules} -body {
+    set bga [model::bga::createBGA 3 3]
+    set fanout [model::fanout::createFanout $bga basic]
+
+    list \
+        [dict get $fanout bga rules channelWidth] \
+        [dict get $fanout routingRules traceWidth] \
+        [dict get $fanout routingRules traceSpacing]
+} -result {600.0 127.0 152.39999999999998}
+
 test fanout-ir-1.3 {compiler emits strict neck and escape segments per pad} -body {
     set fixture [makeCompiledFanout 3 4]
     set compiled [dict get $fixture compiled]
