@@ -133,13 +133,6 @@ Pad Diameter = 0.32 mm
 
 Channel Width = 0.48 mm
 ```
-
-or
-
-```text
-18.9 mil
-```
-
 ---
 
 ## Single Trace Fit Check

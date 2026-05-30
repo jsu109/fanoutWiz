@@ -28,8 +28,9 @@ proc model::fanout::createFanout {bga {structureName basic}} {
         set row [dict get $id row]
         set col [dict get $id col]
         set padClines [model::topology::applyClineToPad $padId $id $bga $structureName]
-        set via [model::via::createForPad $padId $padClines $structureName]
-    
+        set padContext [model::topology::classifyPad $id $bga]
+        set via [model::via::createForPad $padId $padClines $padContext $structureName]
+        
         # ---------------------------------------
         # BUILD FANOUT IR
         # ---------------------------------------

@@ -37,29 +37,41 @@ proc model::via::totalDiameter {viaDef} {
         2.0 * [dict get $viaDef annularRing]
     }]
 }
+proc model::via::checkStructurePolicies {padContext structure} {
 
-proc model::via::createForPad {padId padClines {structureName basic}} {
+    # apply viasOnOuterPads policy
+   set viasOnOuterPads [dict get $structure policy viasOnOuterPads]
+    set edgePad [dict get $padContext edgePad]
+    
+    
+    if {!$viasOnOuterPads && $edgePad} {
+        return 0
+    } else {
+        return 1}
+}
+proc model::via::createForPad {padId padClines padContext {structureName basic}} {
     set structureName [model::via::resolveStructureName $structureName]
     set structure [model::topology::getStructure $structureName]
-    
+
     set viaDef [model::via::definitionFromStructure $structure]
     set escapeGeometry [dict get $padClines segments escape]
     set diameter [model::via::totalDiameter $viaDef]
-
-    return [dict create \
-        id "$padId.via" \
-        padId $padId \
-        type [dict get $viaDef type] \
-        holeDiameter [dict get $viaDef holeDiameter] \
-        annularRing [dict get $viaDef annularRing] \
-        diameter $diameter \
-        geometry [dict create \
-            x [dict get $escapeGeometry x2] \
-            y [dict get $escapeGeometry y2] \
-            radius [expr {$diameter / 2.0}]] \
-        nodes [dict create \
-            from "$padId.escape.exit" \
-            to "$padId.via"]]
+    if {[model::via::checkStructurePolicies $padContext $structure]} {
+        return [dict create \
+            id "$padId.via" \
+            padId $padId \
+            type [dict get $viaDef type] \
+            holeDiameter [dict get $viaDef holeDiameter] \
+            annularRing [dict get $viaDef annularRing] \
+            diameter $diameter \
+            geometry [dict create \
+                x [dict get $escapeGeometry x2] \
+                y [dict get $escapeGeometry y2] \
+                radius [expr {$diameter / 2.0}]] \
+            nodes [dict create \
+                from "$padId.escape.exit" \
+                to "$padId.via"]]
+    }
 }
 
 proc model::via::collectFromFanout {fanout} {

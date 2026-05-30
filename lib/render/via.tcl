@@ -24,29 +24,31 @@ proc render::via::drawVias {canvas frame} {
     }
 
     dict for {padId via} $vias {
-        set geom [dict get $via geometry]
-        set x [expr {[dict get $geom x] * $scale + $ox}]
-        set y [expr {[dict get $geom y] * $scale + $oy}]
-        set radius [expr {[dict get $geom radius] * $scale}]
-        set drillRadius [expr {([dict get $via holeDiameter] / 2.0) * $scale}]
+        if {[dict exists $via geometry]} {
+            set geom [dict get $via geometry]
+            set x [expr {[dict get $geom x] * $scale + $ox}]
+            set y [expr {[dict get $geom y] * $scale + $oy}]
+            set radius [expr {[dict get $geom radius] * $scale}]
+            set drillRadius [expr {([dict get $via holeDiameter] / 2.0) * $scale}]
 
-        $canvas create oval \
-            [expr {$x - $radius}] \
-            [expr {$y - $radius}] \
-            [expr {$x + $radius}] \
-            [expr {$y + $radius}] \
-            -fill "#caa947" \
-            -outline "#ffe08a" \
-            -width 1 \
-            -tags [list via via-land $padId [dict get $via id]]
+            $canvas create oval \
+                [expr {$x - $radius}] \
+                [expr {$y - $radius}] \
+                [expr {$x + $radius}] \
+                [expr {$y + $radius}] \
+                -fill "#caa947" \
+                -outline "#ffe08a" \
+                -width 1 \
+                -tags [list via via-land $padId [dict get $via id]]
 
-        $canvas create oval \
-            [expr {$x - $drillRadius}] \
-            [expr {$y - $drillRadius}] \
-            [expr {$x + $drillRadius}] \
-            [expr {$y + $drillRadius}] \
-            -fill "#1e1e1e" \
-            -outline "" \
-            -tags [list via-drill $padId [dict get $via id]]
+            $canvas create oval \
+                [expr {$x - $drillRadius}] \
+                [expr {$y - $drillRadius}] \
+                [expr {$x + $drillRadius}] \
+                [expr {$y + $drillRadius}] \
+                -fill "#1e1e1e" \
+                -outline "" \
+                -tags [list via-drill $padId [dict get $via id]]
+        }
     }
 }

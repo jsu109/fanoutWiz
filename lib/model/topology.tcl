@@ -73,6 +73,7 @@ proc model::topology::classifyPad {padId bga} {
                         dCol $dCol \
                         ringDepth $ringDepth\
                         quadrant $quadrant \
+                        edgePad $edgePad\
                         edge $edgeSide]\
                         
     return $padContext
