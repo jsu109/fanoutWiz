@@ -91,10 +91,6 @@ proc model::topology::orthogonalEscape {padContext} {
     # offset = laneIndex * lanePitch
 }
 proc model::topology::generateEscapePlan {padContext structure bga} {
-    
-    set quadrant [dict get $padContext quadrant]
-    set ringDepth [dict get $padContext ringDepth]
-
     set neckLength [dict get $structure rules neckLength]
 
     # determine side
@@ -112,69 +108,78 @@ proc model::topology::generateEscapePlan {padContext structure bga} {
 
     return [dict create \
                 side $side \
-                lane $lane \
+                laneId $lane \
                 neckLength $neckLength]
 }
 # determine side cline should exit bga.
 proc model::topology::selectSide {padContext structure bga} {
-
-    set dRow [dict get $padContext dRow]
-    set dCol [dict get $padContext dCol]
-
-    if {abs($dRow) > abs($dCol)} {
-
-        if {$dRow < 0} {
-            return N
-        } else {
-            return S
-        }
-
-    } else {
-
-        if {$dCol < 0} {
-            return W
-        } else {
-            return E
-        }
-    }
-}
-# determine lane
-proc model::topology::selectLane {padContext side structure bga} {
-
     set row [dict get $padContext row]
     set col [dict get $padContext col]
+    set rows [dict get $bga rows]
+    set cols [dict get $bga cols]
+
+    set sideDepths [list \
+        N $row \
+        W $col \
+        E [expr {($cols - 1) - $col}] \
+        S [expr {($rows - 1) - $row}] \
+    ]
+
+    set selectedSide ""
+    set selectedDepth ""
+    foreach {side depth} $sideDepths {
+        if {$selectedSide eq "" || $depth < $selectedDepth} {
+            set selectedSide $side
+            set selectedDepth $depth
+        }
+    }
+
+    return $selectedSide
+}
+# determine lane index by depth from the selected BGA edge
+proc model::topology::selectLane {padContext side structure bga} {
+    set row [dict get $padContext row]
+    set col [dict get $padContext col]
+    set rows [dict get $bga rows]
+    set cols [dict get $bga cols]
 
     switch -- $side {
-        N -
-        S {
-            return $col
+        N {
+            set edgeDepth $row
         }
 
-        E -
+        S {
+            set edgeDepth [expr {($rows - 1) - $row}]
+        }
+
         W {
-            return $row
+            set edgeDepth $col
+        }
+
+        E {
+            set edgeDepth [expr {($cols - 1) - $col}]
         }
 
         default {
             error "Unknown side: $side"
         }
     }
+
+    if {$edgeDepth < 0} {
+        error "Invalid edge depth for row $row col $col in ${rows}x${cols} BGA"
+    }
+
+    return $edgeDepth
 }
 proc model::topology::compileEscapePlan {padName pad padContext structure escapePlan bga} {
 
     set side [dict get $escapePlan side]
-    set lane [dict get $escapePlan lane]
+    set laneId [dict get $escapePlan laneId]
     set neckLength [dict get $escapePlan neckLength]
+    set structureName [dict get $structure id]
 
-    set row [dict get $padContext row]
-    set col [dict get $padContext col]
-
-    set bgaPitch [dict get $bga pitch]
-    set originX [dict get $pad x]
-    set originY [dict get $pad y]
-
-    set x [expr {$originX + $col * $bgaPitch}]
-    set y [expr {$originY + $row * $bgaPitch}]
+    set x [dict get $pad x]
+    set y [dict get $pad y]
 
     set segments {}
 
@@ -214,25 +219,35 @@ proc model::topology::compileEscapePlan {padName pad padContext structure escape
     # LANE OFFSET (simple model)
     # --------------------
     set lanebgaPitch [dict get $structure rules lanePitch]
-    set offset [expr {$lane * $lanebgaPitch}]
+    set offset [expr {($laneId + 1) * $lanebgaPitch}]
 
     # --------------------
     # ESCAPE segment
     # --------------------
     switch $side {
-        N -
+        N {
+            set ex1 $x2
+            set ey1 $y2
+            set ex2 $x2
+            set ey2 [expr {$y2 - $offset}]
+        }
         S {
+            set ex1 $x2
+            set ey1 $y2
+            set ex2 $x2
+            set ey2 [expr {$y2 + $offset}]
+        }
+        E {
             set ex1 $x2
             set ey1 $y2
             set ex2 [expr {$x2 + $offset}]
             set ey2 $y2
         }
-        E -
         W {
             set ex1 $x2
             set ey1 $y2
-            set ex2 $x2
-            set ey2 [expr {$y2 + $offset}]
+            set ex2 [expr {$x2 - $offset}]
+            set ey2 $y2
         }
     }
 
@@ -244,8 +259,9 @@ proc model::topology::compileEscapePlan {padName pad padContext structure escape
     set meta [dict create \
         padId $padName \
         side $side \
-        lane $lane \
-        structure "dogbone" \
+        laneId $laneId \
+        structure $structureName \
+        clineWidth [dict get $structure rules clineWidth] \
     ]
 
     return [dict create \
@@ -260,12 +276,12 @@ proc model::topology::applyClineToPad {padName pad bga structureName} {
     #     meta {
     #         padId A1
     #         side N
-    #         lane 3
-    #         structure dogbone
+    #         laneId 3
+    #         structure basic
     #     }
     #     segments {
-    #         neck   {id width angle geometry nodes}
-    #         escape {id width angle geometry nodes}
+    #         neck   {id width angle laneId side geometry nodes}
+    #         escape {id width angle laneId side geometry nodes}
     #     }
     # }
     

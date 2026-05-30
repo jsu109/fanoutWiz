@@ -295,5 +295,58 @@ proc ui::window::createMainWindow {} {
         -padx 16 \
         -pady {20 10}
 
+    #
+    # Render Diagnostics
+    #
+
+    frame .root.sidebar.diagnostics \
+        -bg "#2d2d30"
+
+    pack .root.sidebar.diagnostics \
+        -fill x \
+        -padx 12 \
+        -pady 8
+
+    label .root.sidebar.diagnostics.title \
+        -text "Render Diagnostics" \
+        -bg "#2d2d30" \
+        -fg white \
+        -font {Helvetica 11 bold}
+
+    pack .root.sidebar.diagnostics.title \
+        -anchor w \
+        -padx 12 \
+        -pady {10 10}
+
+    button .root.sidebar.diagnostics.run \
+        -text "Run Render Tests" \
+        -bg "#3a3a3a" \
+        -fg white \
+        -activebackground "#4cc2ff" \
+        -activeforeground black \
+        -relief flat \
+        -borderwidth 0 \
+        -padx 10 \
+        -pady 8 \
+        -command controller::runRenderDiagnostics
+
+    pack .root.sidebar.diagnostics.run \
+        -fill x \
+        -padx 12 \
+        -pady {0 8}
+
+    label .root.sidebar.diagnostics.result \
+        -text "Not run" \
+        -bg "#2d2d30" \
+        -fg "#cccccc" \
+        -anchor w \
+        -justify left \
+        -wraplength 230
+
+    pack .root.sidebar.diagnostics.result \
+        -fill x \
+        -padx 12 \
+        -pady {0 12}
+
     return .root.workspace.c
 }

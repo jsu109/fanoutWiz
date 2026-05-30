@@ -1,7 +1,15 @@
 namespace eval model::fanout {}
 
-proc model::fanout::createFanout {bga directionSeed} {
-    
+proc model::fanout::resolveStructureName {structureName} {
+    if {[info exists ::fanout::structures::registry($structureName)]} {
+        return $structureName
+    }
+
+    return basic
+}
+
+proc model::fanout::createFanout {bga {structureName basic}} {
+    set structureName [model::fanout::resolveStructureName $structureName]
     set pads [model::bga::generatePads $bga]
     set fanoutPads {}
     
@@ -17,8 +25,7 @@ proc model::fanout::createFanout {bga directionSeed} {
 
         set row [dict get $id row]
         set col [dict get $id col]
-        set structure "dogbone"
-        set padClines [model::topology::applyClineToPad $padId $id $bga $structure]
+        set padClines [model::topology::applyClineToPad $padId $id $bga $structureName]
     
         # ---------------------------------------
         # BUILD FANOUT IR
@@ -29,5 +36,12 @@ proc model::fanout::createFanout {bga directionSeed} {
         dict set fanoutPads $padId clines $padClines
     }
 
-    return [dict create pads $fanoutPads]
+    return [dict create \
+        structure $structureName \
+        bga [dict create \
+            rows [dict get $bga rows] \
+            cols [dict get $bga cols] \
+            pitch [dict get $bga pitch] \
+            padRadius [dict get $bga padRadius]] \
+        pads $fanoutPads]
 }

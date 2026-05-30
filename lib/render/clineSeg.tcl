@@ -64,7 +64,8 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
             $canvas create line \
                 $x1 $y1 $x2 $y2 \
                 -fill $color \
-                -width $segWidth
+                -width $segWidth \
+                -tags [list cline $padId $segName]
         }
     }
 }
