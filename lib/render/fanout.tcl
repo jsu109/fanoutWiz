@@ -12,5 +12,6 @@ proc render::fanout::draw {canvas frame} {
     
     render::pads::drawPads $canvas $pads $::model::bga
     render::clineSeg::drawClineSegs $canvas $frame
+    render::via::drawVias $canvas $frame
     
 }

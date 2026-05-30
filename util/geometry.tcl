@@ -1,0 +1,3 @@
+# distance
+# intersects
+# snapToGrid

@@ -1,14 +1,44 @@
 namespace eval model::bga {}
 
-proc model::bga::createBGA {{rows 5} {cols 5}} {
+proc model::bga::option {options key defaultValue} {
+    if {[dict exists $options $key]} {
+        return [dict get $options $key]
+    }
+
+    return $defaultValue
+}
+
+proc model::bga::createBGA {{rows 5} {cols 5} {options {}}} {
+    set pitch [model::bga::option $options pitch [units::mm 1]]
+    set ballDiameter [model::bga::option $options ballDiameter [units::mm 0.5]]
+    set padScale [model::bga::option $options padScale 0.8]
+    set padDiameter [model::bga::option $options padDiameter [expr {$ballDiameter * $padScale}]]
+    set defaultPadType [model::bga::option $options defaultPadType circle]
 
     return [dict create \
-    rows $rows \
-    cols $cols \
-    pitch [units::mm 1] \
-    padRadius [units::um 100] \
-    defaultPadType circle]
+        rows $rows \
+        cols $cols \
+        pitch $pitch \
+        ballDiameter $ballDiameter \
+        padScale $padScale \
+        padDiameter $padDiameter \
+        padRadius [expr {$padDiameter / 2.0}] \
+        defaultPadType $defaultPadType]
     
+}
+
+proc model::bga::deriveRules {bgaDef} {
+    set pitch [dict get $bgaDef pitch]
+    set padDiameter [dict get $bgaDef padDiameter]
+
+    set channelWidth [expr {$pitch - $padDiameter}]
+    set diagonalPitch [expr {sqrt(2.0 * $pitch * $pitch)}]
+    set availableDiagonalSpace [expr {$diagonalPitch - $padDiameter}]
+
+    return [dict create \
+        channelWidth $channelWidth \
+        diagonalPitch $diagonalPitch \
+        availableDiagonalSpace $availableDiagonalSpace]
 }
 
 proc model::bga::generatePads {bgaDef} {

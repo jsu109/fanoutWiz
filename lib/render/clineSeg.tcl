@@ -16,14 +16,6 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
         set width [dict get $frame width]
     }
 
-    # -----------------------------
-    # get segments safely
-    # -----------------------------
-    if {![dict exists $frame segs]} {
-        puts "No segments found in frame"
-        return
-    }
-    puts "frame Keys: [dict keys $frame]"
     set segs [dict get $frame segs]
     
     # -----------------------------
@@ -46,72 +38,34 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
     }
 
     dict for {padId padClines} $segs {
+        set segments [dict get $padClines segments]
 
-        # -----------------------------
-        # robust normalization
-        # -----------------------------
-        set segDict $padClines
+        dict for {segName segment} $segments {
+            set geom [dict get $segment geometry]
 
-        # unwrap: padClines {segments {...}}
-        if {[dict exists $segDict segments]} {
-            set maybe [dict get $segDict segments]
-
-            # if this is the real segment container (neck/escape), unwrap it
-            if {[dict exists $maybe neck] || [dict exists $maybe escape]} {
-                set segDict $maybe
-            } else {
-                set segDict $maybe
-            }
-        }
-
-        dict for {segKey segData} $segDict {
-
+            set x1 [dict get $geom x1]
+            set y1 [dict get $geom y1]
+            set x2 [dict get $geom x2]
+            set y2 [dict get $geom y2]
 
             # -----------------------------
-            # extract geometry (robust IR handling)
+            # transform
             # -----------------------------
-            dict for {key data} $segData {
-            
+            set x1 [expr {$x1 * $scale + $ox}]
+            set y1 [expr {$y1 * $scale + $oy}]
+            set x2 [expr {$x2 * $scale + $ox}]
+            set y2 [expr {$y2 * $scale + $oy}]
 
-                if {[dict exists $data geometry]} {
-                    set geom [dict get $data geometry]
-                } else {
-                    set geom $data
-                }
-                puts $geom
+            # -----------------------------
+            # draw
+            # -----------------------------
+            set segWidth [expr {[dict get $segment width] * $scale}]
 
-                # validate geometry
-                if {![dict exists $geom x1] || ![dict exists $geom x2]} {
-                    puts "WARN: skipping invalid segment in $padId -> $segKey : $segData"
-                    continue
-                }
-
-                set x1 [dict get $geom x1]
-                set y1 [dict get $geom y1]
-                set x2 [dict get $geom x2]
-                set y2 [dict get $geom y2]
-
-                # -----------------------------
-                # transform
-                # -----------------------------
-                set x1 [expr {$x1 * $scale + $ox}]
-                set y1 [expr {$y1 * $scale + $oy}]
-                set x2 [expr {$x2 * $scale + $ox}]
-                set y2 [expr {$y2 * $scale + $oy}]
-
-                # -----------------------------
-                # draw
-                # -----------------------------
-                set segWidth $width
-                if {[dict exists $data width]} {
-                    set segWidth [expr {[dict get $data width] * $scale}]
-                }
-
-                $canvas create line \
-                    $x1 $y1 $x2 $y2 \
-                    -fill $color \
-                    -width $segWidth
-            }
+            $canvas create line \
+                $x1 $y1 $x2 $y2 \
+                -fill $color \
+                -width $segWidth \
+                -tags [list cline $padId $segName]
         }
     }
 }

@@ -1,64 +1,86 @@
 namespace eval model::fanoutCompiler {}
 
-proc model::fanoutCompiler::compile {fanout} {
-
-    
-    set segments {}
-    set pads [dict get $fanout pads]
-    
-    # -------------------------------------------------
-    # fallback parameters (can later come from BGA config)
-    # -------------------------------------------------
-    set defaultLength [units::mm 0.5]  ;# µm (safe starter escape distance)
-    set width [units::mm 0.1]
-
-    foreach padId [dict keys $pads] {
-        
-        set p [dict get $pads $padId]
-        
-        # -------------------------
-        # pad geometry (µm)
-        # -------------------------
-        set x [dict get $p position x]
-        set y [dict get $p position y]
-
-        set clines [dict get $p clines]
-
-        # unwrap canonical structure
-        if {[dict exists $clines segments]} {
-            set clines [dict get $clines segments]
+proc model::fanoutCompiler::requireKeys {label value requiredKeys} {
+    foreach key $requiredKeys {
+        if {![dict exists $value $key]} {
+            error "$label missing required key: $key"
         }
+    }
+}
 
-        dict for {segName segData} $clines {
+proc model::fanoutCompiler::requireExactKeys {label value expectedKeys} {
+    model::fanoutCompiler::requireKeys $label $value $expectedKeys
 
-            # normalize segment format (support evolving IR shapes)
-            if {[dict exists $segData geometry]} {
-                set geometry [dict get $segData geometry]
-            } else {
-                set geometry $segData
-            }
+    foreach key [dict keys $value] {
+        if {[lsearch -exact $expectedKeys $key] < 0} {
+            error "$label contains unsupported key: $key"
+        }
+    }
+}
 
-            # validate geometry
-            if {![dict exists $geometry x1] || ![dict exists $geometry x2]} {
-                puts "WARN: invalid cline geometry for pad $padId seg $segName -> $segData"
-                continue
-            }
+proc model::fanoutCompiler::segmentAngle {geometry} {
+    set dx [expr {[dict get $geometry x2] - [dict get $geometry x1]}]
+    set dy [expr {[dict get $geometry y2] - [dict get $geometry y1]}]
 
-            set seg [dict create \
-                id $segName \
-                width $width \
-                length $defaultLength \
-                angle 0 \
-                geometry $geometry \
-                nodes [dict create \
-                    from $padId \
-                    to "$padId.exit" \
-                ] \
-            ]
-
-            dict set segments $padId $segName $seg
-        }       
+    if {$dx == 0 && $dy == 0} {
+        return 0
     }
 
-    return [dict create segments $segments]
+    return [expr {atan2($dy, $dx) * 180.0 / acos(-1)}]
+}
+
+proc model::fanoutCompiler::compileSegment {padId segName geometry width side laneId} {
+    model::fanoutCompiler::requireExactKeys "pad $padId segment $segName geometry" \
+        $geometry {x1 y1 x2 y2}
+
+    return [dict create \
+        id $segName \
+        width $width \
+        angle [model::fanoutCompiler::segmentAngle $geometry] \
+        laneId $laneId \
+        side $side \
+        geometry $geometry \
+        nodes [dict create \
+            from $padId \
+            to "$padId.$segName.exit" \
+        ] \
+    ]
+}
+
+proc model::fanoutCompiler::compile {fanout} {
+    set padClines {}
+    set pads [dict get $fanout pads]
+
+    foreach padId [dict keys $pads] {
+        set p [dict get $pads $padId]
+        model::fanoutCompiler::requireKeys "pad $padId" $p {clines}
+
+        set rawPadClines [dict get $p clines]
+        model::fanoutCompiler::requireExactKeys "pad $padId padClines" \
+            $rawPadClines {meta segments}
+
+        set rawSegments [dict get $rawPadClines segments]
+        model::fanoutCompiler::requireExactKeys "pad $padId padClines segments" \
+            $rawSegments {neck escape}
+
+        set meta [dict get $rawPadClines meta]
+        model::fanoutCompiler::requireKeys "pad $padId padClines meta" \
+            $meta {laneId side clineWidth}
+
+        set width [dict get $meta clineWidth]
+
+        set compiledSegments [dict create \
+            neck [model::fanoutCompiler::compileSegment \
+                $padId neck [dict get $rawSegments neck] $width \
+                [dict get $meta side] [dict get $meta laneId]] \
+            escape [model::fanoutCompiler::compileSegment \
+                $padId escape [dict get $rawSegments escape] $width \
+                [dict get $meta side] [dict get $meta laneId]] \
+        ]
+
+        dict set padClines $padId meta $meta
+        dict set padClines $padId segments $compiledSegments
+    }
+
+    return $padClines
 }

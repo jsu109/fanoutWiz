@@ -5,6 +5,8 @@ namespace eval model::clineSeg {}
 #     width
 #     length
 #     angle
+#     laneId
+#     side
 #     nodes {
 #         from
 #         to

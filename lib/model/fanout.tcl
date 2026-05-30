@@ -1,7 +1,17 @@
 namespace eval model::fanout {}
 
-proc model::fanout::createFanout {bga directionSeed} {
-    
+proc model::fanout::resolveStructureName {structureName} {
+    if {[info exists ::fanout::structures::registry($structureName)]} {
+        return $structureName
+    }
+
+    return basic
+}
+
+proc model::fanout::createFanout {bga {structureName basic}} {
+    set structureName [model::fanout::resolveStructureName $structureName]
+    set bgaRules [model::bga::deriveRules $bga]
+    set structure [model::topology::getStructure $structureName]
     set pads [model::bga::generatePads $bga]
     set fanoutPads {}
     
@@ -17,8 +27,8 @@ proc model::fanout::createFanout {bga directionSeed} {
 
         set row [dict get $id row]
         set col [dict get $id col]
-        set structure "dogbone"
-        set padClines [model::topology::applyClineToPad $id $bga $structure]
+        set padClines [model::topology::applyClineToPad $padId $id $bga $structureName]
+        set via [model::via::createForPad $padId $padClines $structureName]
     
         # ---------------------------------------
         # BUILD FANOUT IR
@@ -27,7 +37,21 @@ proc model::fanout::createFanout {bga directionSeed} {
         dict set fanoutPads $padId col $col
         dict set fanoutPads $padId position [dict create x $x y $y]
         dict set fanoutPads $padId clines $padClines
+        dict set fanoutPads $padId via $via
     }
 
-    return [dict create pads $fanoutPads]
+    return [dict create \
+        structure $structureName \
+        bga [dict create \
+            rows [dict get $bga rows] \
+            cols [dict get $bga cols] \
+            pitch [dict get $bga pitch] \
+            ballDiameter [dict get $bga ballDiameter] \
+            padScale [dict get $bga padScale] \
+            padDiameter [dict get $bga padDiameter] \
+            padRadius [dict get $bga padRadius] \
+            rules $bgaRules] \
+        routingRules [dict get $structure rules] \
+        viaDefinition [dict get $structure via] \
+        pads $fanoutPads]
 }
