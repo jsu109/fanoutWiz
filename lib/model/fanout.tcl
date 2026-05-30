@@ -18,7 +18,7 @@ proc model::fanout::createFanout {bga directionSeed} {
         set row [dict get $id row]
         set col [dict get $id col]
         set structure "dogbone"
-        set padClines [model::topology::applyClineToPad $id $bga $structure]
+        set padClines [model::topology::applyClineToPad $padId $id $bga $structure]
     
         # ---------------------------------------
         # BUILD FANOUT IR

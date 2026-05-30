@@ -88,13 +88,7 @@ proc model::topology::orthogonalEscape {padContext} {
     #   - routing class
     #   - preferred escape direction
     #   - topology parameters
-    
-    # length = neckoutDistance
-    # offset = laneIndex * lanebgaPitch
-
-    puts $padContext
-
-    
+    # offset = laneIndex * lanePitch
 }
 proc model::topology::generateEscapePlan {padContext structure bga} {
     
@@ -166,7 +160,7 @@ proc model::topology::selectLane {padContext side structure bga} {
         }
     }
 }
-proc model::topology::compileEscapePlan {padId padContext structure escapePlan bga} {
+proc model::topology::compileEscapePlan {padName pad padContext structure escapePlan bga} {
 
     set side [dict get $escapePlan side]
     set lane [dict get $escapePlan lane]
@@ -175,11 +169,9 @@ proc model::topology::compileEscapePlan {padId padContext structure escapePlan b
     set row [dict get $padContext row]
     set col [dict get $padContext col]
 
-    # assume bgaPitch (you may already have this in bga later)
     set bgaPitch [dict get $bga pitch]
-    puts [dict keys $padId]
-    set originX [dict get $padId x]
-    set originY [dict get $padId y]
+    set originX [dict get $pad x]
+    set originY [dict get $pad y]
 
     set x [expr {$originX + $col * $bgaPitch}]
     set y [expr {$originY + $row * $bgaPitch}]
@@ -250,7 +242,7 @@ proc model::topology::compileEscapePlan {padId padContext structure escapePlan b
     # META
     # --------------------
     set meta [dict create \
-        padId $padId \
+        padId $padName \
         side $side \
         lane $lane \
         structure "dogbone" \
@@ -261,36 +253,30 @@ proc model::topology::compileEscapePlan {padId padContext structure escapePlan b
         segments $segments]
 }
 
-proc model::topology::applyClineToPad {padId bga structrueName} {
+proc model::topology::applyClineToPad {padName pad bga structureName} {
 
-    # TODO: create a Cline object which is definthed by the following proposed data structure
+    # Fanout IR v1 padClines, completed by model::fanoutCompiler::compile:
     # padClines = {
     #     meta {
     #         padId A1
-    #         structure dogbone
     #         side N
     #         lane 3
+    #         structure dogbone
     #     }
-
     #     segments {
-    #         neck   {x1 y1 x2 y2}
-    #         jog    {x1 y1 x2 y2}
-    #         escape {x1 y1 x2 y2}
+    #         neck   {id width angle geometry nodes}
+    #         escape {id width angle geometry nodes}
     #     }
     # }
-    # ClineSegs with a defined Width, length, angle. based on the required
-    # structure, bga size and pin location. 
     
-    # set topologyProc [model::topology::getTopologyProc $structrueName]
-    set structure [model::topology::getStructure $structrueName]
+    set structure [model::topology::getStructure $structureName]
     
-    set padContext [model::topology::classifyPad $padId $bga]
+    set padContext [model::topology::classifyPad $pad $bga]
     
     set escapePlan [model::topology::generateEscapePlan $padContext $structure $bga]
-    set padCline [model::topology::compileEscapePlan $padId $padContext $structure $escapePlan $bga]
+    set padCline [model::topology::compileEscapePlan \
+        $padName $pad $padContext $structure $escapePlan $bga]
 
-    # puts $padCline
     return $padCline
 
 }
-
