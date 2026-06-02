@@ -14,17 +14,29 @@ set fanout::structures::registry(basic) [dict create \
         jogStrategy none \
         escapeUnusedPads no \
         viasOnOuterPads no \
+        viaInPad yes \
     ] \
     rules [dict create \
-        traceWidth [units::mil 5] \
-        traceSpacing [units::mil 6] \
-        clearance [units::mil 6] \
+        traceWidth [units::mm 0.1] \
+        traceSpacing [units::mm 0.1] \
+        clearance [units::mm 0.1] \
         neckLength [units::um 100] \
     ] \
+    spacing [dict create \
+        lineToLineSpacing [units::mm 0.1] \
+        lineToPadSpacing [units::mm 0.1] \
+        lineToViaSpacing [units::mm 0.1] \
+        \
+        viaToViaSpacing [units::mm 0.1]\
+        viaToPadSpacing [units::mm 0.1]\
+        ]\
+    clineSeg [dict create \
+        lineWidth [units::mm 0.1] \
+        ]\
     via [dict create \
         type through \
-        holeDiameter [units::mil 8] \
-        annularRing [units::mil 6] \
+        holeDiameter [units::mm 0.1] \
+        annularRing [units::mm 0.125] \
     ] \
     segments {neck escape} \
     pipeline [dict create \
@@ -34,7 +46,48 @@ set fanout::structures::registry(basic) [dict create \
     ] \
 ]
 
-set fanout::structures::registry(dogbone) [dict replace \
-    $fanout::structures::registry(basic) \
+
+set fanout::structures::registry(dogbone) [dict create \
     id dogbone \
-    label "Dogbone escape"]
+    label "dogbone" \
+    policy [dict create \
+        preferredSide auto \
+        laneMode perColumn \
+        ringPolicy row_depth \
+        jogStrategy none \
+        escapeUnusedPads no \
+        viasOnOuterPads yes \
+        viaInPad no \
+    ] \
+    rules [dict create \
+        traceWidth [units::mm 0.1] \
+        traceSpacing [units::mm 0.1] \
+        clearance [units::mm 0.1] \
+        neckLength [units::um 100] \
+    ] \
+    spacing [dict create \
+        lineToLineSpacing [units::mm 0.1] \
+        lineToPadSpacing [units::mm 0.1] \
+        lineToViaSpacing [units::mm 0.1] \
+        \
+        viaToViaSpacing [units::mm 0.1]\
+        viaToPadSpacing [units::mm 0.2]\
+        ]\
+    clineSeg [dict create \
+        lineWidth [units::mm 0.1] \
+        ]\
+    via [dict create \
+        type through \
+        holeDiameter [units::mm 0.1] \
+        annularRing [units::mm 0.125] \
+    ] \
+    segments {neck escape} \
+    pipeline [dict create \
+        sideSelector  model::topology::selectSide \
+        laneAllocator model::topology::selectLane \
+        escapePlanner model::topology::quadrantEscape \
+    ] \
+]
+
+
+

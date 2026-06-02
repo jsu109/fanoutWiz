@@ -25,8 +25,25 @@ proc model::clineSeg::createSeg {} {
     ]
 }
 
+proc model::clineSeg::resolveStructureName {structureName} {
+    if {[info exists ::fanout::structures::registry($structureName)]} {
+        return $structureName
+    }
 
+    return basic
+}
 
+proc model::clineSeg::definitionFromStructure {$structures} {
+    set structureName [model::clineSeg::resolveStructureName $structureName]
+    set structure [model::topology::getStructure $structureName]
+
+    if {![dict exists $structure via]} {
+        error "Structure [dict get $structure id] missing via definition"
+    }
+    set segDef [dict get $structure clineSeg]
+
+    return $segDef
+}
 proc model::clineSeg::generateSegs {segDef} {
 
     set segs {}

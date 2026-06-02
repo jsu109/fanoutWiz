@@ -14,7 +14,6 @@ proc model::fanout::createFanout {bga {structureName basic}} {
     set structure [model::topology::getStructure $structureName]
     set pads [model::bga::generatePads $bga]
     set fanoutPads {}
-    
     # TODO: add data to pads -> bgaSize: tuple {mxn} 
     foreach padId [dict keys $pads] {
 

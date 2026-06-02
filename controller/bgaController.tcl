@@ -63,7 +63,7 @@ proc controller::collectFrame {} {
     set seg $::model::clineSeg
 
     set pads [model::bga::generatePads $bga]
-    set fanout [model::fanout::createFanout $bga basic] 
+    set fanout [model::fanout::createFanout $bga dogbone] 
 
     set segs [model::fanoutCompiler::compile $fanout]
     set vias [model::via::collectFromFanout $fanout]

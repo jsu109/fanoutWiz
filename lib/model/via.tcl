@@ -54,7 +54,7 @@ proc model::via::createForPad {padId padClines padContext {structureName basic}}
     set structure [model::topology::getStructure $structureName]
 
     set viaDef [model::via::definitionFromStructure $structure]
-    set escapeGeometry [dict get $padClines segments escape]
+    set neckGeometry [dict get $padClines neck]
     set diameter [model::via::totalDiameter $viaDef]
     if {[model::via::checkStructurePolicies $padContext $structure]} {
         return [dict create \
@@ -65,8 +65,8 @@ proc model::via::createForPad {padId padClines padContext {structureName basic}}
             annularRing [dict get $viaDef annularRing] \
             diameter $diameter \
             geometry [dict create \
-                x [dict get $escapeGeometry x2] \
-                y [dict get $escapeGeometry y2] \
+                x [dict get $neckGeometry x2] \
+                y [dict get $neckGeometry y2] \
                 radius [expr {$diameter / 2.0}]] \
             nodes [dict create \
                 from "$padId.escape.exit" \

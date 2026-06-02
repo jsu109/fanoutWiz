@@ -57,11 +57,7 @@ proc model::fanoutCompiler::compile {fanout} {
 
         set rawPadClines [dict get $p clines]
         model::fanoutCompiler::requireExactKeys "pad $padId padClines" \
-            $rawPadClines {meta segments}
-
-        set rawSegments [dict get $rawPadClines segments]
-        model::fanoutCompiler::requireExactKeys "pad $padId padClines segments" \
-            $rawSegments {neck escape}
+            $rawPadClines {meta neck}
 
         set meta [dict get $rawPadClines meta]
         model::fanoutCompiler::requireKeys "pad $padId padClines meta" \
@@ -71,10 +67,7 @@ proc model::fanoutCompiler::compile {fanout} {
 
         set compiledSegments [dict create \
             neck [model::fanoutCompiler::compileSegment \
-                $padId neck [dict get $rawSegments neck] $width \
-                [dict get $meta side] [dict get $meta laneId]] \
-            escape [model::fanoutCompiler::compileSegment \
-                $padId escape [dict get $rawSegments escape] $width \
+                $padId neck [dict get $rawPadClines neck] $width \
                 [dict get $meta side] [dict get $meta laneId]] \
         ]
 
