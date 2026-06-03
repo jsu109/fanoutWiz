@@ -14,10 +14,11 @@ set fanout::structures::registry(basic) [dict create \
         jogStrategy none \
         escapeUnusedPads no \
         viasOnOuterPads no \
-        viaInPad yes \
+        viaInPad no \
+        escapePolicy nearestEdge \
     ] \
     rules [dict create \
-        traceWidth [units::mm 0.1] \
+        traceWidth [units::mm 0.35] \
         traceSpacing [units::mm 0.1] \
         clearance [units::mm 0.1] \
         neckLength [units::um 100] \
@@ -28,7 +29,7 @@ set fanout::structures::registry(basic) [dict create \
         lineToViaSpacing [units::mm 0.1] \
         \
         viaToViaSpacing [units::mm 0.1]\
-        viaToPadSpacing [units::mm 0.1]\
+        viaToPadSpacing [units::mm 0.2]\
         ]\
     clineSeg [dict create \
         lineWidth [units::mm 0.1] \
@@ -56,8 +57,9 @@ set fanout::structures::registry(dogbone) [dict create \
         ringPolicy row_depth \
         jogStrategy none \
         escapeUnusedPads no \
-        viasOnOuterPads yes \
+        viasOnOuterPads no \
         viaInPad no \
+        escapePolicy quadrant \
     ] \
     rules [dict create \
         traceWidth [units::mm 0.1] \

@@ -29,7 +29,7 @@ proc model::fanoutCompiler::segmentAngle {geometry} {
     return [expr {atan2($dy, $dx) * 180.0 / acos(-1)}]
 }
 
-proc model::fanoutCompiler::compileSegment {padId segName geometry width side laneId} {
+proc model::fanoutCompiler::compileSegment {padId segName geometry width escapeDirection meta} {
     model::fanoutCompiler::requireExactKeys "pad $padId segment $segName geometry" \
         $geometry {x1 y1 x2 y2}
 
@@ -37,8 +37,7 @@ proc model::fanoutCompiler::compileSegment {padId segName geometry width side la
         id $segName \
         width $width \
         angle [model::fanoutCompiler::segmentAngle $geometry] \
-        laneId $laneId \
-        side $side \
+        escapeDirection $escapeDirection \
         geometry $geometry \
         nodes [dict create \
             from $padId \
@@ -61,14 +60,14 @@ proc model::fanoutCompiler::compile {fanout} {
 
         set meta [dict get $rawPadClines meta]
         model::fanoutCompiler::requireKeys "pad $padId padClines meta" \
-            $meta {laneId side clineWidth}
+            $meta { escapeDirection clineWidth}
 
         set width [dict get $meta clineWidth]
 
         set compiledSegments [dict create \
             neck [model::fanoutCompiler::compileSegment \
                 $padId neck [dict get $rawPadClines neck] $width \
-                [dict get $meta side] [dict get $meta laneId]] \
+                [dict get $meta escapeDirection] [dict get $meta]] \
         ]
 
         dict set padClines $padId meta $meta
