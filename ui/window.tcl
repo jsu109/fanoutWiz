@@ -296,8 +296,29 @@ proc ui::window::createMainWindow {} {
         -pady {20 10}
 
     #
+    # dogbone button
+    #    
+    button .root.sidebar.dogbone \
+        -text "dogbone" \
+        -bg "#4cc2ff" \
+        -fg black \
+        -activebackground "#66d9ff" \
+        -activeforeground black \
+        -relief flat \
+        -borderwidth 0 \
+        -padx 10 \
+        -pady 10 \
+        -command {controller::build dogbone}
+
+    pack .root.sidebar.dogbone \
+        -fill x \
+        -padx 16 \
+        -pady {20 10}
+
+    #
     # Render Diagnostics
     #
+    
 
     frame .root.sidebar.diagnostics \
         -bg "#2d2d30"

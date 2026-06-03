@@ -55,15 +55,15 @@ proc controller::applyBGA {} {
 
     set ::model::bga [model::bga::createBGA $rows $cols]
     
-    controller::build
+    [controller::build basic]
 }
-proc controller::collectFrame {} {
+proc controller::collectFrame {structureName} {
 
     set bga $::model::bga
     set seg $::model::clineSeg
 
     set pads [model::bga::generatePads $bga]
-    set fanout [model::fanout::createFanout $bga basic] 
+    set fanout [model::fanout::createFanout $bga $structureName] 
 
     set segs [model::fanoutCompiler::compile $fanout]
     set vias [model::via::collectFromFanout $fanout]
@@ -86,12 +86,12 @@ proc controller::collectFrame {} {
         worldH $worldH]
 }
 
-proc controller::build {} {
+proc controller::build {structureName} {
 
     $::render::canvas delete all
 
     # Single source of truth for renderable scene bounds
-    set frame [controller::collectFrame]
+    set frame [controller::collectFrame $structureName]
     set ::controller::lastFrame $frame
     set ch [winfo height $::render::canvas]
     set cw [winfo width $::render::canvas]
@@ -213,5 +213,5 @@ proc controller::applyAndEnableSelection {} {
     # controller::setMode select
 
     ui::status::set "Selection enabled"
-    controller::build
+    controller::build basic
 }
