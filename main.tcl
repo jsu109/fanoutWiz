@@ -21,7 +21,6 @@ source controller/events.tcl
 source controller/orchestrator.tcl
 source controller/bgaController.tcl
 source view/view.tcl
-source strategy/fanout.tcl
 source lib/structures/structures.tcl
 
 set ::render::canvas [ui::window::createMainWindow]
