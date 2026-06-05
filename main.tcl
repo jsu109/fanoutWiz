@@ -8,6 +8,9 @@ source ui/window.tcl
 source ui/status.tcl
 source ui/bindings.tcl
 source units/conversions.tcl
+source controller/state.tcl
+source controller/events.tcl
+source controller/orchestrator.tcl
 source controller/bgaController.tcl
 source view/view.tcl
 source strategy/fanout.tcl

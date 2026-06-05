@@ -1,5 +1,9 @@
 namespace eval model::topology {}
 
+if {![llength [info commands ui::status::set]]} {
+    namespace eval ui::status {}
+    proc ui::status::set {msg} {}
+}
 
 proc model::topology::getTopologyProc {structure} {
 

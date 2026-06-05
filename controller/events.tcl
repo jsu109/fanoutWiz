@@ -34,27 +34,27 @@ proc controller::dispatch {event args} {
 }
 
 proc controller::onModeChanged {mode} {
-    set controller::state::mode $mode
+    set ::controller::state::mode $mode
     ui::sidebar::setMode $mode
 }
 
 
 proc controller::onBGAChanged {rows cols} {
 
-    set controller::state::bga \
+    set ::controller::state::bga \
         [model::bga::createBGA $rows $cols]
 
     controller::dispatch BUILD basic
 }
 
 proc controller::onStructureChanged {structure} {
-    set controller::state::structure $structure
+    set ::controller::state::structure $structure
     controller::dispatch BUILD $structure
 }
 
 proc controller::onPadSelected {padName} {
 
-    set controller::state::selectedPad $padName
+    set ::controller::state::selectedPad $padName
 
     ui::status::set "Selected pad: $padName"
 

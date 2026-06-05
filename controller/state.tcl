@@ -1,3 +1,4 @@
+namespace eval controller {}
 namespace eval controller::state {}
 
 set controller::state::mode "edit"

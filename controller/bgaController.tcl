@@ -2,7 +2,7 @@ namespace eval controller {}
 
 proc controller::setMode {mode} {
 
-    set ::model::mode $mode
+    set ::controller::state::mode $mode
 
     if {![winfo exists .root.sidebar.geometry.rows.slider]} {
         return
@@ -25,7 +25,7 @@ proc controller::setMode {mode} {
 }
 proc controller::toggleMode {} {
 
-    if {$::model::mode eq "edit"} {
+    if {$::controller::state::mode eq "edit"} {
 
         controller::applyAndEnableSelection
 
@@ -42,7 +42,7 @@ proc controller::toggleMode {} {
 }
 
 proc controller::isEditMode {} {
-    return [expr {$::model::mode eq "edit"}]
+    return [expr {$::controller::state::mode eq "edit"}]
 }
 
 proc controller::applyBGA {} {
@@ -50,12 +50,14 @@ proc controller::applyBGA {} {
     if {![controller::isEditMode]} {
         return
     }
+
     set rows [expr {int([.root.sidebar.geometry.rows.slider get])}]
     set cols [expr {int([.root.sidebar.geometry.cols.slider get])}]
 
-    set ::model::bga [model::bga::createBGA $rows $cols]
-    
-    [controller::build basic]
+    set ::controller::state::bga [model::bga::createBGA $rows $cols]
+    set ::model::bga $::controller::state::bga
+
+    controller::build basic
 }
 proc controller::collectFrame {structureName} {
 
@@ -206,11 +208,8 @@ proc controller::applyAndEnableSelection {} {
     set rows [expr {int([.root.sidebar.geometry.rows.slider get])}]
     set cols [expr {int([.root.sidebar.geometry.cols.slider get])}]
 
-    set ::model::bga [model::bga::createBGA $rows $cols]
-
-    
-
-    # controller::setMode select
+    set ::controller::state::bga [model::bga::createBGA $rows $cols]
+    set ::model::bga $::controller::state::bga
 
     ui::status::set "Selection enabled"
     controller::build basic
