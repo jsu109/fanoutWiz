@@ -13,7 +13,7 @@ set fanout::structures::registry(basic) [dict create \
         ringPolicy row_depth \
         jogStrategy none \
         escapeUnusedPads no \
-        viasOnOuterPads no \
+        viasOnOuterPads yes \
         viaInPad no \
         escapePolicy nearestEdge \
     ] \

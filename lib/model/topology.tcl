@@ -145,7 +145,7 @@ proc model::topology::calculateAllowedNeckLength {structure bga} {
         set viaToPad [dict get $spacingRules viaToPadSpacing]
         
         set clearanceRadius [expr {($totalViaDiameter + $bgaPadDiameter)/2.0 + $viaToPad}]
-        ui::status::set $clearanceRadius
+        
         set neckLength [expr {$pitch - (($totalViaDiameter + $bgaPadDiameter) / 2.0) - $viaToPad}]
         # puts [units::um $neckLength]
     }

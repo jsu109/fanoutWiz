@@ -1,5 +1,91 @@
 namespace eval ui::window {}
 
+proc ui::window::collectPolicyOverrides {} {
+    set overrides [dict create]
+    set prefix "::ui::window::policy_"
+
+    foreach var [info vars ::ui::window::policy_*] {
+        set key [string range $var [string length $prefix] end]
+        set value [set $var]
+        dict set overrides $key [expr {$value ? yes : no}]
+    }
+
+    return $overrides
+}
+
+proc ui::window::applyPolicyOverrides {structureName} {
+    if {![info exists ::fanout::structures::registry($structureName)]} {
+        return
+    }
+
+    set structure [model::topology::getStructure $structureName]
+    set policy [dict get $structure policy]
+    set overrides [ui::window::collectPolicyOverrides]
+    ui::status::set "Applying policy overrides: $overrides"
+    dict for {key value} $overrides {
+        if {[dict exists $policy $key]} {
+            dict set policy $key $value
+        }
+    }
+
+    dict set structure policy $policy
+    set ::fanout::structures::registry($structureName) $structure
+}
+
+proc ui::window::refreshPolicyControls {parent structureName} {
+    if {[winfo exists $parent.policyList]} {
+        destroy $parent.policyList
+    }
+
+    frame $parent.policyList -bg "#2a2d31"
+    pack $parent.policyList -fill x -padx 12 -pady {0 8}
+
+    if {![info exists ::fanout::structures::registry($structureName)]} {
+        set structureName basic
+    }
+
+    set structure [model::topology::getStructure $structureName]
+    set policy [dict get $structure policy]
+
+    set count 0
+    dict for {key value} $policy {
+        if {![string equal -nocase $value yes] &&
+            ![string equal -nocase $value true] &&
+            ![string equal -nocase $value on] &&
+            ![string equal $value 1] &&
+            ![string equal -nocase $value no] &&
+            ![string equal -nocase $value false] &&
+            ![string equal -nocase $value off] &&
+            ![string equal $value 0]} {
+            continue
+        }
+
+        set varName "::ui::window::policy_${key}"
+        if {[string equal -nocase $value yes] ||
+            [string equal -nocase $value true] ||
+            [string equal -nocase $value on] ||
+            [string equal $value 1]} {
+            set $varName 1
+        } else {
+            set $varName 0
+        }
+
+        set checkbox [ui::canvas::widget $parent.policyList checkbutton policy_$key \
+            -text [string map {_ { }} $key] \
+            -variable $varName]
+        pack $checkbox -anchor w -pady 1
+        incr count
+    }
+
+    if {$count == 0} {
+        set emptyLabel [ui::canvas::widget $parent.policyList label emptyLabel \
+            -text "No boolean policy flags available for this preset." \
+            -bg "#2a2d31" \
+            -fg "#c7d0db"]
+        pack $emptyLabel -anchor w -pady 4
+    }
+}
+
 proc ui::window::createMainWindow {} {
 
     wm title . "Fanout Visualizer"
@@ -19,13 +105,15 @@ proc ui::window::createMainWindow {} {
 
     frame .root.sidebar \
         -bg "#252526" \
-        -width 280
+        -width 320
 
     pack .root.sidebar \
         -side left \
         -fill y
 
     pack propagate .root.sidebar 0
+
+    lassign [ui::canvas::makeScrollable .root.sidebar "#252526"] sidebarCanvas sidebarInner
 
     #
     # Canvas Area
@@ -82,84 +170,78 @@ proc ui::window::createMainWindow {} {
     # Sidebar Title
     #
 
-    label .root.sidebar.title \
+    set headerFrame [ui::canvas::widget $sidebarInner frame headerFrame -bg "#252526"]
+    pack $headerFrame -fill x -padx 16 -pady {16 12}
+
+    set title [ui::canvas::widget $headerFrame label title \
         -text "Fanout Wiz" \
         -bg "#252526" \
         -fg white \
-        -font {Helvetica 18 bold}
+        -font {Helvetica 18 bold}]
+    pack $title -anchor w
 
-    pack .root.sidebar.title \
-        -anchor w \
-        -padx 16 \
-        -pady {16 20}
-
-    #
-    # Mode Indicator
-    #
-
-    frame .root.sidebar.modeFrame \
-        -bg "#252526"
-
-    pack .root.sidebar.modeFrame \
-        -fill x \
-        -padx 16 \
-        -pady {0 20}
-
-    label .root.sidebar.modeLabel \
-        -text "MODE" \
+    set subTitle [ui::canvas::widget $headerFrame label subtitle \
+        -text "BGA Fanout control center" \
         -bg "#252526" \
-        -fg "#888"
+        -fg "#b8c0cc" \
+        -font {Helvetica 9}]
+    pack $subTitle -anchor w -pady {2 0}
 
-    label .root.sidebar.modeValue \
-        -text "EDIT" \
-        -bg "#252526" \
+    set overviewFrame [ui::canvas::widget $sidebarInner frame overview -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
+    pack $overviewFrame -fill x -padx 14 -pady {0 14}
+
+    set overviewLabel [ui::canvas::widget $overviewFrame label overviewLabel \
+        -text "Live session" \
+        -bg "#2a2d31" \
+        -fg "#8ab4ff" \
+        -font {Helvetica 9 bold}]
+    pack $overviewLabel -anchor w -padx 12 -pady {10 4}
+
+    set modeValue [ui::canvas::widget $overviewFrame label modeValue \
+        -text "EDIT MODE" \
+        -bg "#2a2d31" \
         -fg "#4cc2ff" \
-        -font {Helvetica 12 bold}
+        -font {Helvetica 12 bold}]
+    pack $modeValue -anchor w -padx 12
 
-    pack .root.sidebar.modeLabel \
-        -anchor w
+    set modeHint [ui::canvas::widget $overviewFrame label modeHint \
+        -text "Adjust geometry, apply changes, then run diagnostics." \
+        -bg "#2a2d31" \
+        -fg "#d5dbe5" \
+        -justify left \
+        -wraplength 260]
+    pack $modeHint -anchor w -padx 12 -pady {4 10}
 
-    pack .root.sidebar.modeValue \
-        -anchor w
-
-    set ::modeLabel .root.sidebar.modeValue
-    #
-    # Mode Switch Button
-    #
-
-    button .root.sidebar.modeToggle \
+    set modeToggle [ui::canvas::widget $overviewFrame button modeToggle \
         -text "Switch to SELECT" \
-        -bg "#3a3a3a" \
-        -fg white \
-        -activebackground "#4cc2ff" \
-        -activeforeground black \
+        -bg "#2f78c7" \
+        -fg "#eff6ff" \
+        -activebackground "#3d8df0" \
+        -activeforeground "#ffffff" \
         -relief flat \
         -borderwidth 0 \
-        -command controller::toggleMode
+        -command controller::toggleMode]
+    pack $modeToggle -fill x -padx 12 -pady {0 10}
 
-    pack .root.sidebar.modeToggle \
-        -fill x \
-        -padx 16 \
-        -pady {10 20}
+    set ::modeLabel $modeValue
     #
     # BGA Geometry Section
     #
 
-    frame .root.sidebar.geometry \
-        -bg "#2d2d30"
+    set geometryFrame [ui::canvas::widget $sidebarInner frame geometry -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
 
-    pack .root.sidebar.geometry \
+    pack $geometryFrame \
         -fill x \
-        -padx 12 \
-        -pady 8
+        -padx 14 \
+        -pady {0 12}
 
-    label .root.sidebar.geometry.title \
+    set geometryTitle [ui::canvas::widget $geometryFrame label title \
         -text "BGA Geometry" \
-        -bg "#2d2d30" \
+        -bg "#2a2d31" \
         -fg white \
-        -font {Helvetica 11 bold}
+        -font {Helvetica 11 bold}]
 
-    pack .root.sidebar.geometry.title \
+    pack $geometryTitle \
         -anchor w \
         -padx 12 \
         -pady {10 16}
@@ -168,47 +250,33 @@ proc ui::window::createMainWindow {} {
     # Rows Control
     #
 
-    frame .root.sidebar.geometry.rows \
-        -bg "#2d2d30"
+    set rowsFrame [ui::canvas::widget $geometryFrame frame rows -bg "#2a2d31"]
 
-    pack .root.sidebar.geometry.rows \
+    pack $rowsFrame \
         -fill x \
         -padx 12 \
         -pady 6
 
-    label .root.sidebar.geometry.rows.label \
-        -text "Rows" \
-        -bg "#2d2d30" \
-        -fg "#cccccc"
-
-    label .root.sidebar.geometry.rows.value \
-        -text "3" \
-        -bg "#2d2d30" \
-        -fg "#4cc2ff"
-
-    scale .root.sidebar.geometry.rows.slider \
+    set rowsLabel [ui::canvas::widget $rowsFrame label label -text "Rows" -bg "#2a2d31" -fg "#cccccc"]
+    set rowsValue [ui::canvas::widget $rowsFrame label value -text "3" -bg "#2a2d31" -fg "#4cc2ff"]
+    set rowsSlider [ui::canvas::widget $rowsFrame scale slider \
         -from 2 \
         -to 20 \
         -orient horizontal \
         -showvalue 0 \
         -length 180 \
-        -bg "#2d2d30" \
+        -bg "#2a2d31" \
         -fg white \
         -troughcolor "#3c3c3c" \
         -activebackground "#4cc2ff" \
         -highlightthickness 0 \
-        -borderwidth 0
+        -borderwidth 0]
 
-    .root.sidebar.geometry.rows.slider set 3
+    $rowsSlider set 3
 
-    pack .root.sidebar.geometry.rows.label \
-        -side left
-
-    pack .root.sidebar.geometry.rows.value \
-        -side right
-
-    pack .root.sidebar.geometry.rows.slider \
-        -side bottom \
+    pack $rowsLabel -side left
+    pack $rowsValue -side right
+    pack $rowsSlider -side bottom \
         -fill x \
         -pady {6 0}
 
@@ -216,158 +284,180 @@ proc ui::window::createMainWindow {} {
     # Cols Control
     #
 
-    frame .root.sidebar.geometry.cols \
-        -bg "#2d2d30"
+    set colsFrame [ui::canvas::widget $geometryFrame frame cols -bg "#2a2d31"]
 
-    pack .root.sidebar.geometry.cols \
+    pack $colsFrame \
         -fill x \
         -padx 12 \
         -pady 6
 
-    label .root.sidebar.geometry.cols.label \
-        -text "Cols" \
-        -bg "#2d2d30" \
-        -fg "#cccccc"
-
-    label .root.sidebar.geometry.cols.value \
-        -text "3" \
-        -bg "#2d2d30" \
-        -fg "#4cc2ff"
-
-    scale .root.sidebar.geometry.cols.slider \
+    set colsLabel [ui::canvas::widget $colsFrame label label -text "Cols" -bg "#2a2d31" -fg "#cccccc"]
+    set colsValue [ui::canvas::widget $colsFrame label value -text "3" -bg "#2a2d31" -fg "#4cc2ff"]
+    set colsSlider [ui::canvas::widget $colsFrame scale slider \
         -from 2 \
         -to 20 \
         -orient horizontal \
         -showvalue 0 \
         -length 180 \
-        -bg "#2d2d30" \
+        -bg "#2a2d31" \
         -fg white \
         -troughcolor "#3c3c3c" \
         -activebackground "#4cc2ff" \
         -highlightthickness 0 \
-        -borderwidth 0
+        -borderwidth 0]
 
-    .root.sidebar.geometry.cols.slider set 3
+    $colsSlider set 3
 
-    pack .root.sidebar.geometry.cols.label \
-        -side left
-
-    pack .root.sidebar.geometry.cols.value \
-        -side right
-
-    pack .root.sidebar.geometry.cols.slider \
-        -side bottom \
+    pack $colsLabel -side left
+    pack $colsValue -side right
+    pack $colsSlider -side bottom \
         -fill x \
         -pady {6 0}
 
     #
     # Slider Value Updates
     #
+    bind $rowsSlider <Motion> [list apply {{rowsValue rowsSlider} {
+        $rowsValue configure -text [$rowsSlider get]
+    }} $rowsValue $rowsSlider]
 
-    bind .root.sidebar.geometry.rows.slider <Motion> {
-        .root.sidebar.geometry.rows.value configure \
-            -text [.root.sidebar.geometry.rows.slider get]
-    }
-
-    bind .root.sidebar.geometry.cols.slider <Motion> {
-        .root.sidebar.geometry.cols.value configure \
-            -text [.root.sidebar.geometry.cols.slider get]
-    }
+    bind $colsSlider <Motion> [list apply {{colsValue colsSlider} {
+        $colsValue configure -text [$colsSlider get]
+    }} $colsValue $colsSlider]
 
     #
-    # Apply Button
+    # Action Panel
     #
+    set actionFrame [ui::canvas::widget $sidebarInner frame actionPanel -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
+    pack $actionFrame -fill x -padx 14 -pady {0 12}
 
-    button .root.sidebar.apply \
+    set actionTitle [ui::canvas::widget $actionFrame label title \
+        -text "Actions" \
+        -bg "#2a2d31" \
+        -fg white \
+        -font {Helvetica 11 bold}]
+    pack $actionTitle -anchor w -padx 12 -pady {10 8}
+
+    set applyButton [ui::canvas::widget $actionFrame button apply \
         -text "Apply Changes" \
-        -bg "#4cc2ff" \
-        -fg black \
-        -activebackground "#66d9ff" \
-        -activeforeground black \
+        -bg "#2f78c7" \
+        -fg "#eff6ff" \
+        -activebackground "#3d8df0" \
+        -activeforeground "#ffffff" \
         -relief flat \
         -borderwidth 0 \
         -padx 10 \
         -pady 10 \
-        -command controller::applyAndEnableSelection
+        -command controller::applyAndEnableSelection]
 
-    pack .root.sidebar.apply \
-        -fill x \
-        -padx 16 \
-        -pady {20 10}
+    pack $applyButton -fill x -padx 12 -pady {0 8}
 
-    #
-    # dogbone button
-    #    
-    button .root.sidebar.dogbone \
-        -text "dogbone" \
-        -bg "#4cc2ff" \
-        -fg black \
-        -activebackground "#66d9ff" \
-        -activeforeground black \
-        -relief flat \
-        -borderwidth 0 \
-        -padx 10 \
-        -pady 10 \
-        -command {controller::build dogbone}
+    # set dogboneButton [ui::canvas::widget $actionFrame button dogbone \
+    #     -text "Dogbone View" \
+    #     -bg "#3b556d" \
+    #     -fg "#edf3f8" \
+    #     -activebackground "#4a738f" \
+    #     -activeforeground "#ffffff" \
+    #     -relief flat \
+    #     -borderwidth 0 \
+    #     -padx 10 \
+    #     -pady 10 \
+    #     -command {controller::build dogbone}]
 
-    pack .root.sidebar.dogbone \
-        -fill x \
-        -padx 16 \
-        -pady {20 10}
+    # pack $dogboneButton -fill x -padx 12 -pady {0 10}
+
+    # set basicButton [ui::canvas::widget $actionFrame button basic \
+    #     -text "Basic View" \
+    #     -bg "#3b556d" \
+    #     -fg "#edf3f8" \
+    #     -activebackground "#4a738f" \
+    #     -activeforeground "#ffffff" \
+    #     -relief flat \
+    #     -borderwidth 0 \
+    #     -padx 10 \
+    #     -pady 10 \
+    #     -command {controller::build basic}]
+
+    # pack $basicButton -fill x -padx 12 -pady {0 10}
 
     #
     # Render Diagnostics
     #
     
 
-    frame .root.sidebar.diagnostics \
-        -bg "#2d2d30"
+    # set diagnosticsFrame [ui::canvas::widget $sidebarInner frame diagnostics -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
 
-    pack .root.sidebar.diagnostics \
-        -fill x \
-        -padx 12 \
-        -pady 8
+    # pack $diagnosticsFrame \
+    #     -fill x \
+    #     -padx 14 \
+    #     -pady {0 18}
 
-    label .root.sidebar.diagnostics.title \
-        -text "Render Diagnostics" \
-        -bg "#2d2d30" \
-        -fg white \
-        -font {Helvetica 11 bold}
+    # set diagnosticsTitle [ui::canvas::widget $diagnosticsFrame label title \
+    #     -text "Render Diagnostics" \
+    #     -bg "#2a2d31" \
+    #     -fg white \
+    #     -font {Helvetica 11 bold}]
 
-    pack .root.sidebar.diagnostics.title \
-        -anchor w \
-        -padx 12 \
-        -pady {10 10}
+    # pack $diagnosticsTitle \
+    #     -anchor w \
+    #     -padx 12 \
+    #     -pady {10 10}
 
-    button .root.sidebar.diagnostics.run \
-        -text "Run Render Tests" \
-        -bg "#3a3a3a" \
-        -fg white \
-        -activebackground "#4cc2ff" \
-        -activeforeground black \
-        -relief flat \
-        -borderwidth 0 \
-        -padx 10 \
-        -pady 8 \
-        -command controller::runRenderDiagnostics
+    # set diagnosticsRun [ui::canvas::widget $diagnosticsFrame button run \
+    #     -text "Run Render Tests" \
+    #     -bg "#3b556d" \
+    #     -fg "#edf3f8" \
+    #     -activebackground "#4a738f" \
+    #     -activeforeground "#ffffff" \
+    #     -relief flat \
+    #     -borderwidth 0 \
+    #     -padx 10 \
+    #     -pady 8 \
+    #     -command controller::runRenderDiagnostics]
 
-    pack .root.sidebar.diagnostics.run \
-        -fill x \
-        -padx 12 \
-        -pady {0 8}
+    # pack $diagnosticsRun \
+    #     -fill x \
+    #     -padx 12 \
+    #     -pady {0 8}
 
-    label .root.sidebar.diagnostics.result \
-        -text "Not run" \
-        -bg "#2d2d30" \
-        -fg "#cccccc" \
-        -anchor w \
-        -justify left \
-        -wraplength 230
+    # set diagnosticsResult [ui::canvas::widget $diagnosticsFrame label result \
+    #     -text "Not run" \
+    #     -bg "#2a2d31" \
+    #     -fg "#cccccc" \
+    #     -anchor w \
+    #     -justify left \
+    #     -wraplength 230]
 
-    pack .root.sidebar.diagnostics.result \
+    # pack $diagnosticsResult \
         -fill x \
         -padx 12 \
         -pady {0 12}
+
+    set structurePolicyFrame [ui::canvas::widget $sidebarInner frame prefsPanel -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
+    pack $structurePolicyFrame -fill x -padx 14 -pady {0 18}
+
+    set prefsTitle [ui::canvas::widget $structurePolicyFrame label title \
+        -text "Policies" \
+        -bg "#2a2d31" \
+        -fg white \
+        -font {Helvetica 11 bold}]
+    pack $prefsTitle -anchor w -padx 12 -pady {10 8}
+
+    set structureLabel [ui::canvas::widget $structurePolicyFrame label structureLabel \
+        -text "Structure preset" \
+        -bg "#2a2d31" \
+        -fg "#cccccc"]
+    pack $structureLabel -anchor w -padx 12
+
+    set structureCombo [ui::canvas::widget $structurePolicyFrame combobox structureCombo \
+        -values [lsort [array names ::fanout::structures::registry]] \
+        -state readonly \
+        -textvariable ::ui::window::structurePreset]
+    set ::ui::window::structurePreset basic
+    pack $structureCombo -fill x -padx 12 -pady {4 10}
+
+    bind $structureCombo <<ComboboxSelected>> "ui::window::refreshPolicyControls $structurePolicyFrame \[%W get\]"
+    ui::window::refreshPolicyControls $structurePolicyFrame $::ui::window::structurePreset
 
     return .root.workspace.c
 }
