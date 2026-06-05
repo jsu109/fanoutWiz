@@ -138,6 +138,7 @@ proc model::topology::calculateAllowedNeckLength {structure bga} {
     } else {
         set spacingRules [dict get $structure spacing] 
         set viaDef [dict get $structure via]
+        set rules [dict get $viaDef rules]
         
         set pitch [dict get $bga pitch]
         set totalViaDiameter [model::via::totalDiameter $viaDef]

@@ -10,9 +10,9 @@ proc model::via::definitionFromStructure {{structureName basic}} {
     }
 
     set viaDef [dict get $structure via]
-
+    set rules [dict get $viaDef rules]
     foreach key {holeDiameter annularRing} {
-        if {![dict exists $viaDef $key]} {
+        if {![dict exists $rules $key]} {
             error "Structure [dict get $structure id] via missing required key: $key"
         }
     }
@@ -32,9 +32,15 @@ proc model::via::resolveStructureName {structureName} {
 }
 
 proc model::via::totalDiameter {viaDef} {
+    set rules [dict get $viaDef rules]
+     foreach key {holeDiameter annularRing} {
+        if {![dict exists $rules $key]} {
+            error "Via definition missing required rule: $key"
+        }
+    }
     return [expr {
-        [dict get $viaDef holeDiameter] +
-        2.0 * [dict get $viaDef annularRing]
+        [dict get $rules holeDiameter] +
+        2.0 * [dict get $rules annularRing]
     }]
 }
 proc model::via::checkStructurePolicies {padContext structure} {
@@ -54,6 +60,7 @@ proc model::via::createForPad {padId padClines padContext {structureName basic}}
     set structure [model::topology::getStructure $structureName]
 
     set viaDef [model::via::definitionFromStructure $structure]
+    set rules [dict get $viaDef rules]
     set neckGeometry [dict get $padClines neck]
     set diameter [model::via::totalDiameter $viaDef]
     if {[model::via::checkStructurePolicies $padContext $structure]} {
@@ -61,8 +68,8 @@ proc model::via::createForPad {padId padClines padContext {structureName basic}}
             id "$padId.via" \
             padId $padId \
             type [dict get $viaDef type] \
-            holeDiameter [dict get $viaDef holeDiameter] \
-            annularRing [dict get $viaDef annularRing] \
+            holeDiameter [dict get $rules holeDiameter] \
+            annularRing [dict get $rules annularRing] \
             diameter $diameter \
             geometry [dict create \
                 x [dict get $neckGeometry x2] \

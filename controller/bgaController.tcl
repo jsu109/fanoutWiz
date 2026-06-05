@@ -214,7 +214,7 @@ proc controller::applyAndEnableSelection {} {
     }
 
     if {[info exists ::fanout::structures::registry($structureName)]} {
-        ui::window::applyPolicyOverrides $structureName
+        ui::window::applySectionParamOverrides $structureName policy
     }
 
     set ::controller::state::bga [model::bga::createBGA $rows $cols]

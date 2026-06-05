@@ -2,7 +2,36 @@ package require fanout::model
 source units/conversions.tcl
 namespace eval fanout::structures {
     variable registry
+    variable viaTypes
 }
+# fanout::structures::viaTypes is a dict of via types, each containing:
+# - id: unique identifier for the via type
+# - label: human-readable name for the via type
+# - rules: dict of design rules for the via type (hole diameter, annular ring, etc.)
+set fanout::structures::viaTypes(through) [dict create \
+    id through \
+    type "Through" \
+    rules [dict create \
+        holeDiameter [units::mm 0.1] \
+        annularRing [units::mm 0.125] \
+    ] \
+]
+
+set fanout::structures::viaTypes(blind) [dict create \
+    id blind \
+    type "Blind" \
+    rules [dict create \
+        holeDiameter [units::mm 0.1] \
+        annularRing [units::mm 0.125] \
+    ] \
+]
+
+# fanout::structures::registry is a dict of structure presets, each containing:
+# - id: unique identifier for the preset
+# - label: human-readable name for the preset
+# - policy: dict of policies governing the escape strategy
+# - rules: dict of design rules (trace width, spacing, etc.)
+# - spacing: dict of spacing rules between different elements   
 
 set fanout::structures::registry(basic) [dict create \
     id basic \
@@ -34,11 +63,7 @@ set fanout::structures::registry(basic) [dict create \
     clineSeg [dict create \
         lineWidth [units::mm 0.1] \
         ]\
-    via [dict create \
-        type through \
-        holeDiameter [units::mm 0.1] \
-        annularRing [units::mm 0.125] \
-    ] \
+    via $::fanout::structures::viaTypes(through) \
     segments {neck escape} \
     pipeline [dict create \
         sideSelector  model::topology::selectSide \
@@ -46,7 +71,6 @@ set fanout::structures::registry(basic) [dict create \
         escapePlanner model::topology::orthogonalEscape \
     ] \
 ]
-
 
 set fanout::structures::registry(dogbone) [dict create \
     id dogbone \
@@ -78,11 +102,7 @@ set fanout::structures::registry(dogbone) [dict create \
     clineSeg [dict create \
         lineWidth [units::mm 0.1] \
         ]\
-    via [dict create \
-        type through \
-        holeDiameter [units::mm 0.1] \
-        annularRing [units::mm 0.125] \
-    ] \
+    via $::fanout::structures::viaTypes(blind) \
     segments {neck escape} \
     pipeline [dict create \
         sideSelector  model::topology::selectSide \
@@ -90,6 +110,7 @@ set fanout::structures::registry(dogbone) [dict create \
         escapePlanner model::topology::quadrantEscape \
     ] \
 ]
+
 
 
 

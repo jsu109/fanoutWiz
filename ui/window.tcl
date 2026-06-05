@@ -1,54 +1,53 @@
 namespace eval ui::window {}
 
-proc ui::window::collectPolicyOverrides {} {
+proc ui::window::collectSectionParamOverrides {sectionName} {
     set overrides [dict create]
-    set prefix "::ui::window::policy_"
-
+    set prefix "::ui::window::${sectionName}_"
     foreach var [info vars ::ui::window::policy_*] {
         set key [string range $var [string length $prefix] end]
         set value [set $var]
         dict set overrides $key [expr {$value ? yes : no}]
     }
-
     return $overrides
+    
 }
 
-proc ui::window::applyPolicyOverrides {structureName} {
+proc ui::window::applySectionParamOverrides {structureName sectionName} {
+
     if {![info exists ::fanout::structures::registry($structureName)]} {
         return
     }
-
+    
     set structure [model::topology::getStructure $structureName]
-    set policy [dict get $structure policy]
-    set overrides [ui::window::collectPolicyOverrides]
-    ui::status::set "Applying policy overrides: $overrides"
+    set section [dict get $structure $sectionName]
+    set overrides [ui::window::collectSectionParamOverrides $sectionName]
     dict for {key value} $overrides {
-        if {[dict exists $policy $key]} {
-            dict set policy $key $value
+        if {[dict exists $section $key]} {
+            dict set section $key $value
         }
     }
 
-    dict set structure policy $policy
+    dict set structure $sectionName $section
     set ::fanout::structures::registry($structureName) $structure
 }
 
-proc ui::window::refreshPolicyControls {parent structureName} {
-    if {[winfo exists $parent.policyList]} {
-        destroy $parent.policyList
+proc ui::window::refreshSectionParamOverrideControls {parent structureName sectionName} {
+    if {[winfo exists $parent.${sectionName}List]} {
+        destroy $parent.${sectionName}List
     }
 
-    frame $parent.policyList -bg "#2a2d31"
-    pack $parent.policyList -fill x -padx 12 -pady {0 8}
+    frame $parent.${sectionName}List -bg "#2a2d31"
+    pack $parent.${sectionName}List -fill x -padx 12 -pady {0 8}
 
     if {![info exists ::fanout::structures::registry($structureName)]} {
         set structureName basic
     }
 
     set structure [model::topology::getStructure $structureName]
-    set policy [dict get $structure policy]
+    set section [dict get $structure $sectionName]
 
     set count 0
-    dict for {key value} $policy {
+    dict for {key value} $section {
         if {![string equal -nocase $value yes] &&
             ![string equal -nocase $value true] &&
             ![string equal -nocase $value on] &&
@@ -60,7 +59,7 @@ proc ui::window::refreshPolicyControls {parent structureName} {
             continue
         }
 
-        set varName "::ui::window::policy_${key}"
+        set varName "::ui::window::${sectionName}_${key}"
         if {[string equal -nocase $value yes] ||
             [string equal -nocase $value true] ||
             [string equal -nocase $value on] ||
@@ -70,7 +69,7 @@ proc ui::window::refreshPolicyControls {parent structureName} {
             set $varName 0
         }
 
-        set checkbox [ui::canvas::widget $parent.policyList checkbutton policy_$key \
+        set checkbox [ui::canvas::widget $parent.${sectionName}List checkbutton policy_$key \
             -text [string map {_ { }} $key] \
             -variable $varName]
         pack $checkbox -anchor w -pady 1
@@ -78,7 +77,7 @@ proc ui::window::refreshPolicyControls {parent structureName} {
     }
 
     if {$count == 0} {
-        set emptyLabel [ui::canvas::widget $parent.policyList label emptyLabel \
+        set emptyLabel [ui::canvas::widget $parent.${sectionName}List label emptyLabel \
             -text "No boolean policy flags available for this preset." \
             -bg "#2a2d31" \
             -fg "#c7d0db"]
@@ -456,8 +455,40 @@ proc ui::window::createMainWindow {} {
     set ::ui::window::structurePreset basic
     pack $structureCombo -fill x -padx 12 -pady {4 10}
 
-    bind $structureCombo <<ComboboxSelected>> "ui::window::refreshPolicyControls $structurePolicyFrame \[%W get\]"
-    ui::window::refreshPolicyControls $structurePolicyFrame $::ui::window::structurePreset
+    bind $structureCombo <<ComboboxSelected>> "ui::window::refreshSectionParamOverrideControls $structurePolicyFrame \[%W get\] policy"
+    ui::window::refreshSectionParamOverrideControls $structurePolicyFrame $::ui::window::structurePreset policy
+
+    # via Section Frame
+    set structureViaFrame [ui::canvas::widget $sidebarInner frame viaPanel \
+    -bg "#2a2d31" \
+    -highlightbackground "#3b3f46" \
+    -highlightthickness 1]
+
+    pack $structureViaFrame -fill x -padx 14 -pady {0 18}
+
+    set viaTitle [ui::canvas::widget $structureViaFrame label title \
+        -text "Via Configuration" \
+        -bg "#2a2d31" \
+        -fg white \
+        -font {Helvetica 11 bold}]
+    pack $viaTitle -anchor w -padx 12 -pady {10 8}
+
+    set structureViaLabel [ui::canvas::widget $structureViaFrame label structureLabel \
+        -text "via Structure preset" \
+        -bg "#2a2d31" \
+        -fg "#cccccc"]
+    pack $structureViaLabel -anchor w -padx 12
+
+    set structureViaCombo [ui::canvas::widget $structureViaFrame combobox structureCombo \
+        -values [lsort [array names ::fanout::structures::viaTypes]] \
+        -state readonly \
+        -textvariable ::ui::window::viaStructurePreset]
+
+    set ::ui::window::viaStructurePreset through
+    pack $structureViaCombo -fill x -padx 12 -pady {4 10}
+
+    bind $structureViaCombo <<ComboboxSelected>> "ui::window::refreshSectionParamOverrideControls $structureViaFrame \[%W get\] via"
+    ui::window::refreshSectionParamOverrideControls $structureViaFrame $::ui::window::viaStructurePreset via
 
     return .root.workspace.c
 }
