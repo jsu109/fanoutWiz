@@ -15,6 +15,7 @@ source ui/canvasHelpers.tcl
 source ui/window.tcl
 source ui/status.tcl
 source ui/bindings.tcl
+source ui/format.tcl
 source units/conversions.tcl
 source controller/state.tcl
 source controller/events.tcl

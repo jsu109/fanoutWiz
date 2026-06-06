@@ -66,9 +66,18 @@ proc controller::collectFrame {structureName} {
 
     set pads [model::bga::generatePads $bga]
     set fanout [model::fanout::createFanout $bga $structureName] 
-
     set segs [model::fanoutCompiler::compile $fanout]
     set vias [model::via::collectFromFanout $fanout]
+    
+    set features {}
+    lappend features {*}[model::measure::normalisePads $pads]
+    lappend features {*}[model::measure::normaliseSegments $segs]
+    lappend features {*}[model::measure::normaliseVias $vias]
+
+    # test to check pad Pitch calculations are correct by measuring distance between first two pads and comparing to pitch
+    set distance [model::measure::manhattanDistance [lindex $features 0] [lindex $features 1]]
+    puts "Distance between first two pads: [ui::format::distance $distance]"
+
     set cols [dict get $bga cols]
     set rows [dict get $bga rows]
     set pitch [dict get $bga pitch]
