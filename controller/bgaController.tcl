@@ -74,6 +74,10 @@ proc controller::collectFrame {structureName} {
     lappend features {*}[model::measure::normaliseSegments $segs]
     lappend features {*}[model::measure::normaliseVias $vias]
 
+    set featureIndex {}
+    foreach f $features {
+        dict set featureIndex [dict get $f id] $f
+    }
     # test to check pad Pitch calculations are correct by measuring distance between first two pads and comparing to pitch
     set distance [model::measure::manhattanDistance [lindex $features 0] [lindex $features 1]]
     puts "Distance between first two pads: [ui::format::distance $distance]"
@@ -93,6 +97,7 @@ proc controller::collectFrame {structureName} {
         pads $pads \
         segs $segs \
         vias $vias \
+        featureIndex $featureIndex \
         worldW $worldW \
         worldH $worldH]
 }

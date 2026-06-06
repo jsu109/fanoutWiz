@@ -37,9 +37,9 @@ proc render::via::drawVias {canvas frame} {
                 [expr {$x + $radius}] \
                 [expr {$y + $radius}] \
                 -fill "#caa947" \
-                -outline "#ffe08a" \
+                -outline "" \
                 -width 1 \
-                -tags [list via via-land $padId [dict get $via id]]
+                -tags [list feature:${padId}.via via]
 
             $canvas create oval \
                 [expr {$x - $drillRadius}] \

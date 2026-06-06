@@ -65,7 +65,7 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
                 $x1 $y1 $x2 $y2 \
                 -fill $color \
                 -width $segWidth \
-                -tags [list cline $padId $segName]
+                 -tags [list feature:${padId}.segment seg] \
         }
     }
 }

@@ -25,7 +25,7 @@ proc render::pads::drawPads {canvas pads bgaDef} {
                 [expr {$sy + $sr}] \
                 -fill orange \
                 -outline {} \
-                -tags [list pad $padName]]
+                -tags [list feature:${padName}.pad pad]] \
             }
 
             square {
@@ -36,7 +36,7 @@ proc render::pads::drawPads {canvas pads bgaDef} {
                 [expr {$sy + $sr}] \
                 -fill cyan \
                 -outline {} \
-                -tags [list pad $padName]]
+                -tags [list feature:${padName}.pad pad]] \
             }     
         }
         
