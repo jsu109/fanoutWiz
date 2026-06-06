@@ -1,5 +1,9 @@
 namespace eval model::topology {}
 
+if {![llength [info commands ui::status::set]]} {
+    namespace eval ui::status {}
+    proc ui::status::set {msg} {}
+}
 
 proc model::topology::getTopologyProc {structure} {
 
@@ -134,6 +138,7 @@ proc model::topology::calculateAllowedNeckLength {structure bga} {
     } else {
         set spacingRules [dict get $structure spacing] 
         set viaDef [dict get $structure via]
+        set rules [dict get $viaDef rules]
         
         set pitch [dict get $bga pitch]
         set totalViaDiameter [model::via::totalDiameter $viaDef]
@@ -141,7 +146,7 @@ proc model::topology::calculateAllowedNeckLength {structure bga} {
         set viaToPad [dict get $spacingRules viaToPadSpacing]
         
         set clearanceRadius [expr {($totalViaDiameter + $bgaPadDiameter)/2.0 + $viaToPad}]
-        ui::status::set $clearanceRadius
+        
         set neckLength [expr {$pitch - (($totalViaDiameter + $bgaPadDiameter) / 2.0) - $viaToPad}]
         # puts [units::um $neckLength]
     }

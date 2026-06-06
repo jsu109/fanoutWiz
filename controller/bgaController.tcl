@@ -2,47 +2,47 @@ namespace eval controller {}
 
 proc controller::setMode {mode} {
 
-    set ::model::mode $mode
+    set ::controller::state::mode $mode
 
-    if {![winfo exists .root.sidebar.geometry.rows.slider]} {
+    if {![winfo exists .root.sidebar.inner.geometry.rows.slider]} {
         return
     }
 
     if {$mode eq "select"} {
 
-        .root.sidebar.geometry.rows.slider configure -state disabled
-        .root.sidebar.geometry.cols.slider configure -state disabled
+        .root.sidebar.inner.geometry.rows.slider configure -state disabled
+        .root.sidebar.inner.geometry.cols.slider configure -state disabled
 
-        .root.sidebar.modeValue configure -text "SELECT"
+        .root.sidebar.inner.overview.modeValue configure -text "SELECT"
 
     } else {
 
-        .root.sidebar.geometry.rows.slider configure -state normal
-        .root.sidebar.geometry.cols.slider configure -state normal
+        .root.sidebar.inner.geometry.rows.slider configure -state normal
+        .root.sidebar.inner.geometry.cols.slider configure -state normal
 
-        .root.sidebar.modeValue configure -text "EDIT"
+        .root.sidebar.inner.overview.modeValue configure -text "EDIT"
     }
 }
 proc controller::toggleMode {} {
 
-    if {$::model::mode eq "edit"} {
+    if {$::controller::state::mode eq "edit"} {
 
         controller::applyAndEnableSelection
 
-        .root.sidebar.modeToggle configure -text "Switch to EDIT"
+        .root.sidebar.inner.overview.modeToggle configure -text "Switch to EDIT"
 
     } else {
 
         controller::setMode edit
 
-        .root.sidebar.modeToggle configure -text "Switch to SELECT"
+        .root.sidebar.inner.overview.modeToggle configure -text "Switch to SELECT"
 
     }
 
 }
 
 proc controller::isEditMode {} {
-    return [expr {$::model::mode eq "edit"}]
+    return [expr {$::controller::state::mode eq "edit"}]
 }
 
 proc controller::applyBGA {} {
@@ -50,20 +50,22 @@ proc controller::applyBGA {} {
     if {![controller::isEditMode]} {
         return
     }
-    set rows [expr {int([.root.sidebar.geometry.rows.slider get])}]
-    set cols [expr {int([.root.sidebar.geometry.cols.slider get])}]
 
-    set ::model::bga [model::bga::createBGA $rows $cols]
-    
-    controller::build
+    set rows [expr {int([.root.sidebar.inner.geometry.rows.slider get])}]
+    set cols [expr {int([.root.sidebar.inner.geometry.cols.slider get])}]
+
+    set ::controller::state::bga [model::bga::createBGA $rows $cols]
+    set ::model::bga $::controller::state::bga
+
+    controller::build basic
 }
-proc controller::collectFrame {} {
+proc controller::collectFrame {structureName} {
 
     set bga $::model::bga
     set seg $::model::clineSeg
 
     set pads [model::bga::generatePads $bga]
-    set fanout [model::fanout::createFanout $bga basic] 
+    set fanout [model::fanout::createFanout $bga $structureName] 
 
     set segs [model::fanoutCompiler::compile $fanout]
     set vias [model::via::collectFromFanout $fanout]
@@ -86,12 +88,12 @@ proc controller::collectFrame {} {
         worldH $worldH]
 }
 
-proc controller::build {} {
+proc controller::build {structureName} {
 
     $::render::canvas delete all
 
     # Single source of truth for renderable scene bounds
-    set frame [controller::collectFrame]
+    set frame [controller::collectFrame $structureName]
     set ::controller::lastFrame $frame
     set ch [winfo height $::render::canvas]
     set cw [winfo width $::render::canvas]
@@ -175,13 +177,13 @@ proc controller::runRenderDiagnostics {} {
         $actualClines $expectedClines \
         [llength $invalidClines]]
 
-    if {[winfo exists .root.sidebar.diagnostics.result]} {
+    if {[winfo exists .root.sidebar.inner.diagnostics.result]} {
         if {$passed} {
-            .root.sidebar.diagnostics.result configure \
+            .root.sidebar.inner.diagnostics.result configure \
                 -text "PASS  $summary" \
                 -fg "#8bd450"
         } else {
-            .root.sidebar.diagnostics.result configure \
+            .root.sidebar.inner.diagnostics.result configure \
                 -text "FAIL  $summary" \
                 -fg "#ff6b6b"
         }
@@ -203,15 +205,21 @@ proc controller::runRenderDiagnostics {} {
 }
 
 proc controller::applyAndEnableSelection {} {
-    set rows [expr {int([.root.sidebar.geometry.rows.slider get])}]
-    set cols [expr {int([.root.sidebar.geometry.cols.slider get])}]
+    set rows [expr {int([.root.sidebar.inner.geometry.rows.slider get])}]
+    set cols [expr {int([.root.sidebar.inner.geometry.cols.slider get])}]
 
-    set ::model::bga [model::bga::createBGA $rows $cols]
+    set structureName basic
+    if {[info exists ::ui::window::structurePreset]} {
+        set structureName [string tolower $::ui::window::structurePreset]
+    }
 
-    
+    if {[info exists ::fanout::structures::registry($structureName)]} {
+        ui::window::applySectionParamOverrides $structureName policy
+    }
 
-    # controller::setMode select
+    set ::controller::state::bga [model::bga::createBGA $rows $cols]
+    set ::model::bga $::controller::state::bga
 
     ui::status::set "Selection enabled"
-    controller::build
+    controller::build $structureName
 }
