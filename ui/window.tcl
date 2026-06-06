@@ -351,33 +351,6 @@ proc ui::window::createMainWindow {} {
 
     pack $applyButton -fill x -padx 12 -pady {0 8}
 
-    # set dogboneButton [ui::canvas::widget $actionFrame button dogbone \
-    #     -text "Dogbone View" \
-    #     -bg "#3b556d" \
-    #     -fg "#edf3f8" \
-    #     -activebackground "#4a738f" \
-    #     -activeforeground "#ffffff" \
-    #     -relief flat \
-    #     -borderwidth 0 \
-    #     -padx 10 \
-    #     -pady 10 \
-    #     -command {controller::build dogbone}]
-
-    # pack $dogboneButton -fill x -padx 12 -pady {0 10}
-
-    # set basicButton [ui::canvas::widget $actionFrame button basic \
-    #     -text "Basic View" \
-    #     -bg "#3b556d" \
-    #     -fg "#edf3f8" \
-    #     -activebackground "#4a738f" \
-    #     -activeforeground "#ffffff" \
-    #     -relief flat \
-    #     -borderwidth 0 \
-    #     -padx 10 \
-    #     -pady 10 \
-    #     -command {controller::build basic}]
-
-    # pack $basicButton -fill x -padx 12 -pady {0 10}
 
     #
     # Render Diagnostics
@@ -432,33 +405,35 @@ proc ui::window::createMainWindow {} {
         -padx 12 \
         -pady {0 12}
 
+
+    # Policy Panel
     set structurePolicyFrame [ui::canvas::widget $sidebarInner frame prefsPanel -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
     pack $structurePolicyFrame -fill x -padx 14 -pady {0 18}
 
-    set prefsTitle [ui::canvas::widget $structurePolicyFrame label title \
+    set policyTitle [ui::canvas::widget $structurePolicyFrame label title \
         -text "Policies" \
         -bg "#2a2d31" \
         -fg white \
         -font {Helvetica 11 bold}]
-    pack $prefsTitle -anchor w -padx 12 -pady {10 8}
+    pack $policyTitle -anchor w -padx 12 -pady {10 8}
 
-    set structureLabel [ui::canvas::widget $structurePolicyFrame label structureLabel \
+    set policyLabel [ui::canvas::widget $structurePolicyFrame label policyLabel \
         -text "Structure preset" \
         -bg "#2a2d31" \
         -fg "#cccccc"]
-    pack $structureLabel -anchor w -padx 12
+    pack $policyLabel -anchor w -padx 12
 
-    set structureCombo [ui::canvas::widget $structurePolicyFrame combobox structureCombo \
+    set structurePolicyCombo [ui::canvas::widget $structurePolicyFrame combobox structurePolicyCombo \
         -values [lsort [array names ::fanout::structures::registry]] \
         -state readonly \
         -textvariable ::ui::window::structurePreset]
     set ::ui::window::structurePreset basic
-    pack $structureCombo -fill x -padx 12 -pady {4 10}
+    pack $structurePolicyCombo -fill x -padx 12 -pady {4 10}
 
-    bind $structureCombo <<ComboboxSelected>> "ui::window::refreshSectionParamOverrideControls $structurePolicyFrame \[%W get\] policy"
+    bind $structurePolicyCombo <<ComboboxSelected>> "ui::window::refreshSectionParamOverrideControls $structurePolicyFrame \[%W get\] policy"
     ui::window::refreshSectionParamOverrideControls $structurePolicyFrame $::ui::window::structurePreset policy
 
-    # via Section Frame
+    # via Panel
     set structureViaFrame [ui::canvas::widget $sidebarInner frame viaPanel \
     -bg "#2a2d31" \
     -highlightbackground "#3b3f46" \
@@ -473,13 +448,13 @@ proc ui::window::createMainWindow {} {
         -font {Helvetica 11 bold}]
     pack $viaTitle -anchor w -padx 12 -pady {10 8}
 
-    set structureViaLabel [ui::canvas::widget $structureViaFrame label structureLabel \
+    set structureViaLabel [ui::canvas::widget $structureViaFrame label policyLabel \
         -text "via Structure preset" \
         -bg "#2a2d31" \
         -fg "#cccccc"]
     pack $structureViaLabel -anchor w -padx 12
 
-    set structureViaCombo [ui::canvas::widget $structureViaFrame combobox structureCombo \
+    set structureViaCombo [ui::canvas::widget $structureViaFrame combobox structurePolicyCombo \
         -values [lsort [array names ::fanout::structures::viaTypes]] \
         -state readonly \
         -textvariable ::ui::window::viaStructurePreset]
