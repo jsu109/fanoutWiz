@@ -1,5 +1,55 @@
 namespace eval ui::window {}
 
+# Tool UI metadata (drives header display)
+proc ui::window::createToolHeader {overviewFrame} {
+
+    controller::tools::setActiveTool
+    set tool $::controller::activeTool
+    if {![info exists ::controller::tool($tool)]} {
+        set label "UNKNOWN MODE"
+        set next "select"
+        set hint ""
+    } else {
+        set meta $::controller::tool($tool)
+        set label [dict get $meta label]
+        set next [dict get $meta next]
+        set hint [dict get $meta hint]
+    }
+
+    set overviewLabel [ui::canvas::widget $overviewFrame label overviewLabel \
+        -text "Live session" \
+        -bg "#2a2d31" \
+        -fg "#8ab4ff" \
+        -font {Helvetica 9 bold}]
+    pack $overviewLabel -anchor w -padx 12 -pady {10 4}
+
+    set modeValue [ui::canvas::widget $overviewFrame label modeValue \
+        -text $label \
+        -bg "#2a2d31" \
+        -fg "#4cc2ff" \
+        -font {Helvetica 12 bold}]
+    pack $modeValue -anchor w -padx 12
+
+    set modeHint [ui::canvas::widget $overviewFrame label modeHint \
+        -text $hint \
+        -bg "#2a2d31" \
+        -fg "#d5dbe5" \
+        -justify left \
+        -wraplength 260]
+    pack $modeHint -anchor w -padx 12 -pady {4 10}
+
+    set modeToggle [ui::canvas::widget $overviewFrame button modeToggle \
+        -text "Switch to $next" \
+        -bg "#2f78c7" \
+        -fg "#eff6ff" \
+        -activebackground "#3d8df0" \
+        -activeforeground "#ffffff" \
+        -relief flat \
+        -borderwidth 0 \
+        -command [list controller::tools::setActiveTool $next]]
+    pack $modeToggle -fill x -padx 12 -pady {0 10}
+}
+
 proc ui::window::collectSectionParamOverrides {sectionName} {
     set overrides [dict create]
     set prefix "::ui::window::${sectionName}_"
@@ -189,40 +239,7 @@ proc ui::window::createMainWindow {} {
     set overviewFrame [ui::canvas::widget $sidebarInner frame overview -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
     pack $overviewFrame -fill x -padx 14 -pady {0 14}
 
-    set overviewLabel [ui::canvas::widget $overviewFrame label overviewLabel \
-        -text "Live session" \
-        -bg "#2a2d31" \
-        -fg "#8ab4ff" \
-        -font {Helvetica 9 bold}]
-    pack $overviewLabel -anchor w -padx 12 -pady {10 4}
-
-    set modeValue [ui::canvas::widget $overviewFrame label modeValue \
-        -text "EDIT MODE" \
-        -bg "#2a2d31" \
-        -fg "#4cc2ff" \
-        -font {Helvetica 12 bold}]
-    pack $modeValue -anchor w -padx 12
-
-    set modeHint [ui::canvas::widget $overviewFrame label modeHint \
-        -text "Adjust geometry, apply changes, then run diagnostics." \
-        -bg "#2a2d31" \
-        -fg "#d5dbe5" \
-        -justify left \
-        -wraplength 260]
-    pack $modeHint -anchor w -padx 12 -pady {4 10}
-
-    set modeToggle [ui::canvas::widget $overviewFrame button modeToggle \
-        -text "Switch to SELECT" \
-        -bg "#2f78c7" \
-        -fg "#eff6ff" \
-        -activebackground "#3d8df0" \
-        -activeforeground "#ffffff" \
-        -relief flat \
-        -borderwidth 0 \
-        -command controller::toggleMode]
-    pack $modeToggle -fill x -padx 12 -pady {0 10}
-
-    set ::modeLabel $modeValue
+    ui::window::createToolHeader $overviewFrame
     #
     # BGA Geometry Section
     #

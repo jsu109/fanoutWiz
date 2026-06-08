@@ -1,6 +1,5 @@
 namespace eval ui::bindings {}
 
-namespace eval ui::bindings {}
 
 proc ui::bindings::attachPadSelection {canvas} {
 
@@ -45,8 +44,8 @@ proc ui::bindings::onCanvasClick {canvas} {
     }
 
     set feature [dict get $featureIndex $featureId]
-    render::highlight::highlightFeature $canvas $featureId green
-    ui::status::set "Selected: $featureId"
+    controller::selection::featureSelected $canvas $featureId
+    
 }
 
 # not currently working, need to investigate further
