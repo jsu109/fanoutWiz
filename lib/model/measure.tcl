@@ -76,9 +76,18 @@ proc model::measure::resolveFeature {feature} {
 proc model::measure::manhattanDistance {feature1 feature2} {
     set pos1 [model::measure::resolveFeature $feature1]
     set pos2 [model::measure::resolveFeature $feature2]
-
+    puts "Resolved positions: $pos1, $pos2"
     set dx [expr {abs([dict get $pos1 x] - [dict get $pos2 x])}]
     set dy [expr {abs([dict get $pos1 y] - [dict get $pos2 y])}]
 
     return [expr {$dx + $dy}]
+}
+proc model::measure::euclideanDistance {feature1 feature2} {
+    set pos1 [model::measure::resolveFeature $feature1]
+    set pos2 [model::measure::resolveFeature $feature2]
+    puts "Resolved positions: $pos1, $pos2"
+    set dx [expr {[dict get $pos1 x] - [dict get $pos2 x]}]
+    set dy [expr {[dict get $pos1 y] - [dict get $pos2 y]}]
+
+    return [expr {sqrt($dx*$dx + $dy*$dy)}]
 }

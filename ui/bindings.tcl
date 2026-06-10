@@ -7,20 +7,23 @@ proc ui::bindings::attachPadSelection {canvas} {
     $canvas bind pad <Button-1> [list ui::bindings::onCanvasClick $canvas]
     $canvas bind seg <Button-1> [list ui::bindings::onCanvasClick $canvas]
     $canvas bind via <Button-1> [list ui::bindings::onCanvasClick $canvas]
-
-    # background click
-    $canvas bind background <Button-1> [list ui::bindings::onBackgroundClick $canvas]
+    bind $canvas <Button-1> [list ui::bindings::onCanvasBackgroundClick $canvas %x %y]
 }
 
+proc ui::bindings::onCanvasBackgroundClick {canvas x y} {
+    set item [$canvas find withtag current]
+    if {[llength $item] == 0} {
+        controller::selection::clearSelection $canvas
+    }
+    
 
+}
 
 proc ui::bindings::onCanvasClick {canvas} {
 
     set item [$canvas find withtag current]
     set tags [$canvas gettags $item]
-
     
-
     # extract featureId from tags
     set featureId ""
 
@@ -46,16 +49,4 @@ proc ui::bindings::onCanvasClick {canvas} {
     set feature [dict get $featureIndex $featureId]
     controller::selection::featureSelected $canvas $featureId
     
-}
-
-# not currently working, need to investigate further
-proc ui::bindings::onBackgroundClick {canvas} {
-
-    set item [$canvas find withtag current]
-
-    # canvas background is usually item 1
-    if {$item eq 1} {
-        render::selection::clear $canvas
-        ui::status::set "No selection"
-    }
 }

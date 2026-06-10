@@ -11,7 +11,11 @@ proc controller::selection::featureSelected {canvas featureId} {
     controller::tools::dispatch $canvas $featureId
 }
 
-proc controller::selection::clear {} {
+proc controller::selection::clearSelection {canvas} {
     variable selectedFeatureId
     set selectedFeatureId ""
+    controller::tools::dispatch $canvas $selectedFeatureId
+    ui::status::set "No selection"
+    # deselect all
+    render::highlight::clearAllHighlights $canvas
 }

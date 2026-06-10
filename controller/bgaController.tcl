@@ -1,55 +1,9 @@
 namespace eval controller {}
 
-proc controller::setMode {mode} {
-
-    set ::controller::state::mode $mode
-
-    if {![winfo exists .root.sidebar.inner.geometry.rows.slider]} {
-        return
-    }
-
-    if {$mode eq "select"} {
-
-        .root.sidebar.inner.geometry.rows.slider configure -state disabled
-        .root.sidebar.inner.geometry.cols.slider configure -state disabled
-
-        .root.sidebar.inner.overview.modeValue configure -text "SELECT"
-
-    } else {
-
-        .root.sidebar.inner.geometry.rows.slider configure -state normal
-        .root.sidebar.inner.geometry.cols.slider configure -state normal
-
-        .root.sidebar.inner.overview.modeValue configure -text "EDIT"
-    }
-}
-proc controller::toggleMode {} {
-
-    if {$::controller::state::mode eq "edit"} {
-
-        controller::applyAndEnableSelection
-
-        .root.sidebar.inner.overview.modeToggle configure -text "Switch to EDIT"
-
-    } else {
-
-        controller::setMode edit
-
-        .root.sidebar.inner.overview.modeToggle configure -text "Switch to SELECT"
-
-    }
-
-}
-
-proc controller::isEditMode {} {
-    return [expr {$::controller::state::mode eq "edit"}]
-}
 
 proc controller::applyBGA {} {
 
-    if {![controller::isEditMode]} {
-        return
-    }
+    
 
     set rows [expr {int([.root.sidebar.inner.geometry.rows.slider get])}]
     set cols [expr {int([.root.sidebar.inner.geometry.cols.slider get])}]
@@ -78,9 +32,6 @@ proc controller::collectFrame {structureName} {
     foreach f $features {
         dict set featureIndex [dict get $f id] $f
     }
-    # test to check pad Pitch calculations are correct by measuring distance between first two pads and comparing to pitch
-    set distance [model::measure::manhattanDistance [lindex $features 0] [lindex $features 1]]
-    puts "Distance between first two pads: [ui::format::distance $distance]"
 
     set cols [dict get $bga cols]
     set rows [dict get $bga rows]

@@ -20,7 +20,7 @@ proc controller::tools::dispatch {canvas featureId} {
         }
 
         measure {
-            controller::tools::measure::onFeatureSelected $featureId
+            controller::tools::measure::onFeatureSelected $canvas $featureId
         }
     }
 }

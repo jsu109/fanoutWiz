@@ -15,6 +15,7 @@ proc ui::window::createToolHeader {overviewFrame} {
         set next [dict get $meta next]
         set hint [dict get $meta hint]
     }
+    
 
     set overviewLabel [ui::canvas::widget $overviewFrame label overviewLabel \
         -text "Live session" \
@@ -184,19 +185,11 @@ proc ui::window::createMainWindow {} {
         -bg "#1e1e1e" \
         -highlightthickness 0]
 
+
     pack .root.workspace.c \
         -fill both \
         -expand 1
 
-    #
-    # Background click catcher
-    #
-
-    $canvas create rectangle \
-        0 0 5000 5000 \
-        -fill "" \
-        -outline "" \
-        -tags background
 
     #
     # Status Bar
