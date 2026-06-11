@@ -11,16 +11,15 @@ proc controller::tools::setActiveTool {{tool select}} {
     set ::controller::activeTool $tool
     ui::status::set "Active Tool: $tool"
 }
-proc controller::tools::dispatch {canvas featureId} {
+proc controller::tools::getTool {} {
 
     switch $::controller::activeTool {
 
         select {
-            controller::selection::handleSelect $canvas $featureId
+            return {controller::selection::featureSelected}
         }
-
         measure {
-            controller::tools::measure::onFeatureSelected $canvas $featureId
+            return {controller::selection::measureSelect}
         }
     }
 }

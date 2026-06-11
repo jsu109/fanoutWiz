@@ -47,6 +47,6 @@ proc ui::bindings::onCanvasClick {canvas} {
     }
 
     set feature [dict get $featureIndex $featureId]
-    controller::selection::featureSelected $canvas $featureId
+    controller::selection::handleSelection $canvas $featureId
     
 }

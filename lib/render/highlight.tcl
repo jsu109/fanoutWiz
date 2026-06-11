@@ -3,7 +3,8 @@ variable highlightedItemsDict
 variable canvas
 
 set highlightedItemsDict {}
-proc render::highlight::highlightFeature {canvas featureId highlightColor} {
+
+proc render::highlight::highlightFeature {canvas featureId {highlightColor "green"}} {
     set canvas $canvas
     variable highlightedItemsDict
 

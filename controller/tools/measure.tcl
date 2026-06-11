@@ -39,8 +39,23 @@ proc controller::tools::measure::onFeatureSelected {canvas featureId} {
     set manhattan [model::measure::manhattanDistance $firstFeature $secondFeature]
     ui::status::set "Distance between $firstFeatureId and $featureId: [ui::format::distance $euclidean] (Euclidean), [ui::format::distance $manhattan] (Manhattan)"
 
-    set firstFeatureId $featureId
     set oldFirstFeatureId $firstFeatureId
+    set firstFeatureId $featureId
+    
+}
+
+proc controller::tools::measure::measureBetween {canvas featureId1 featureId2} {
+    variable firstFeatureId
+    set firstFeatureId ""
+
+    set featureIndex [dict get $::controller::lastFrame featureIndex]
+    set feature1 [dict get $featureIndex $featureId1]
+    set feature2 [dict get $featureIndex $featureId2]
+
+    puts "Measuring distance between $featureId1 and $featureId2"
+    set euclidean [model::measure::euclideanDistance $feature1 $feature2]
+    set manhattan [model::measure::manhattanDistance $feature1 $feature2]
+    ui::status::set "Distance between $featureId1 and $featureId2: [ui::format::distance $euclidean] (Euclidean), [ui::format::distance $manhattan] (Manhattan)"
 }
 
 proc controller::tools::measure::reset {} {
