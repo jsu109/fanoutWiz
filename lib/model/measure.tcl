@@ -88,6 +88,7 @@ proc model::measure::euclideanDistance {feature1 feature2} {
     puts "Resolved positions: $pos1, $pos2"
     set dx [expr {[dict get $pos1 x] - [dict get $pos2 x]}]
     set dy [expr {[dict get $pos1 y] - [dict get $pos2 y]}]
+    
 
     return [expr {sqrt($dx*$dx + $dy*$dy)}]
 }
