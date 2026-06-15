@@ -16,7 +16,7 @@ proc controller::tools::getTool {} {
     switch $::controller::activeTool {
 
         select {
-            return {controller::selection::featureSelected}
+            return {controller::selection::featureSelect}
         }
         measure {
             return {controller::selection::measureSelect}

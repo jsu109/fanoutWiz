@@ -1,8 +1,8 @@
-namespace eval render::highlight {}
+namespace eval render::highlight {
 variable highlightedItemsDict
 variable canvas
-
 set highlightedItemsDict {}
+}
 
 proc render::highlight::highlightFeature {canvas featureId {highlightColor "green"}} {
     set canvas $canvas
@@ -49,7 +49,7 @@ proc render::highlight::clearAllHighlights {canvas} {
 proc render::highlight::clearHighlight {canvas featureId} {
     
     variable highlightedItemsDict
-
+    
     foreach item [dict keys $highlightedItemsDict] {
 
         set typeTags [$canvas gettags $item]
