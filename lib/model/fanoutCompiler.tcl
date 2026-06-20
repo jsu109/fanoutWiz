@@ -62,6 +62,7 @@ proc model::fanoutCompiler::compile {fanout} {
         model::fanoutCompiler::requireKeys "pad $padId padClines meta" \
             $meta { escapeDirection clineWidth}
 
+        
         set width [dict get $meta clineWidth]
 
         set compiledSegments [dict create \

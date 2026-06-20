@@ -56,7 +56,14 @@ proc controller::tools::measure::measureBetween {canvas featureId1 featureId2} {
     set euclidean [model::measure::euclideanDistance $feature1 $feature2]
     set manhattan [model::measure::manhattanDistance $feature1 $feature2]
     ui::status::set "Distance between $featureId1 and $featureId2: [ui::format::distance $euclidean] (Euclidean), [ui::format::distance $manhattan] (Manhattan)"
-    render::figs::drawline $canvas [model::measure::resolveFeature $feature1] [model::measure::resolveFeature $feature2]
+    controller::tools::measure::drawLine $canvas $feature1 $feature2
+}
+proc controller::tools::measure::drawLine {canvas featureId1 featureId2} {
+    set resolvedFeat1 [model::measure::resolveFeature $featureId1]
+    set resolvedFeat2 [model::measure::resolveFeature $featureId2]
+    render::canvas::clearCanvasItemByTag $canvas {measurementLine}
+    render::figs::drawline $canvas $resolvedFeat1 $resolvedFeat2
+
 }
 
 proc controller::tools::measure::reset {} {

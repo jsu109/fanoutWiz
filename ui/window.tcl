@@ -1,55 +1,140 @@
-namespace eval ui::window {}
+namespace eval ui::window {
+    variable toolHeaderOverviewFrame
+    variable modeValue
+    variable modeHint
+    variable modeToggle
+}
 
-# Tool UI metadata (drives header display)
-proc ui::window::createToolHeader {overviewFrame} {
-
-    controller::tools::setActiveTool
-    set tool $::controller::activeTool
-    if {![info exists ::controller::tool($tool)]} {
-        set label "UNKNOWN MODE"
-        set next "select"
-        set hint ""
-    } else {
-        set meta $::controller::tool($tool)
-        set label [dict get $meta label]
-        set next [dict get $meta next]
-        set hint [dict get $meta hint]
-    }
-    
-
-    set overviewLabel [ui::canvas::widget $overviewFrame label overviewLabel \
-        -text "Live session" \
+proc ui::window::createSection {parent name title} {
+    set frame [ui::canvas::widget $parent frame $name \
         -bg "#2a2d31" \
-        -fg "#8ab4ff" \
-        -font {Helvetica 9 bold}]
-    pack $overviewLabel -anchor w -padx 12 -pady {10 4}
-
-    set modeValue [ui::canvas::widget $overviewFrame label modeValue \
-        -text $label \
+        -highlightbackground "#3b3f46" \
+        -highlightthickness 1]
+    pack $frame -fill x -padx 14 -pady {0 12}
+    set titleWidget [ui::canvas::widget $frame label title \
+        -text $title \
+        -bg "#2a2d31" \
+        -fg white \
+        -font {Helvetica 11 bold}]
+    pack $titleWidget -anchor w -padx 12 -pady {10 8}
+    return $frame
+}
+proc ui::window::createActiveText {parent name text args} {
+    set label [ui::canvas::widget $parent label $name \
+        -text $text \
         -bg "#2a2d31" \
         -fg "#4cc2ff" \
         -font {Helvetica 12 bold}]
-    pack $modeValue -anchor w -padx 12
 
-    set modeHint [ui::canvas::widget $overviewFrame label modeHint \
-        -text $hint \
+    pack $label -anchor w -padx 12
+
+    # store reference for updates
+    set ::ui::window::activeText($name) $label
+
+    return $label
+}
+proc ui::window::setActiveText {name text} {
+    if {[info exists ::ui::window::activeText($name)]} {
+        $::ui::window::activeText($name) configure -text $text
+    }
+}
+proc ui::window::createSliderControl {parent name labelText from to initial res} {
+
+    set controlFrame [ui::canvas::widget $parent frame $name -bg "#2a2d31"]
+    pack $controlFrame -fill x -padx 12 -pady 6
+
+    # label is ONLY static text (optional, not value display)
+    set label [ui::canvas::widget $controlFrame label label \
+        -text $labelText \
         -bg "#2a2d31" \
-        -fg "#d5dbe5" \
-        -justify left \
-        -wraplength 260]
-    pack $modeHint -anchor w -padx 12 -pady {4 10}
+        -fg "#cccccc"]
 
-    set modeToggle [ui::canvas::widget $overviewFrame button modeToggle \
-        -text "Switch to $next" \
+    pack $label -side left
+
+    # slider is the only dynamic element
+    set slider [ui::canvas::widget $controlFrame scale slider \
+        -from $from \
+        -to $to \
+        -resolution $res \
+        -orient horizontal \
+        -showvalue 1 \
+        -length 180 \
+        -bg "#2a2d31" \
+        -fg white \
+        -troughcolor "#3c3c3c" \
+        -activebackground "#4cc2ff" \
+        -highlightthickness 0 \
+        -borderwidth 0 \
+        -command [list ui::window::onSliderChanged $name]]
+
+    $slider set $initial
+
+    pack $slider -side right -fill x -expand 1
+
+    return $slider
+}
+
+proc ui::window::onSliderChanged {args} {
+    set key   [lindex $args 0]
+    set value [lindex $args end]
+    controller::state::set $key $value
+}
+
+proc ui::window::createComboControl {parent name labelText values textVariable} {
+    set controlFrame [ui::canvas::widget $parent frame $name -bg "#2a2d31"]
+    pack $controlFrame -fill x -padx 12 -pady {0 10}
+
+    set label [ui::canvas::widget $controlFrame label label \
+        -text $labelText -bg "#2a2d31" -fg "#cccccc"]
+    pack $label -anchor w
+
+    set combo [ui::canvas::widget $controlFrame combobox combo \
+        -values $values -state readonly -textvariable $textVariable]
+    pack $combo -fill x -pady {4 0}
+
+    return [dict create frame $controlFrame label $label combo $combo]
+}
+
+proc ui::window::createActionButton {parent name text command} {
+    set button [ui::canvas::widget $parent button $name \
+        -text $text \
         -bg "#2f78c7" \
         -fg "#eff6ff" \
         -activebackground "#3d8df0" \
         -activeforeground "#ffffff" \
         -relief flat \
         -borderwidth 0 \
-        -command [list controller::tools::setActiveTool $next]]
-    pack $modeToggle -fill x -padx 12 -pady {0 10}
+        -padx 10 \
+        -pady 10 \
+        -command $command]
+    pack $button -fill x -padx 12 -pady {0 8}
+    return $button
 }
+
+
+proc ui::window::buildControls {parent definitions} {
+    set created [dict create]
+    foreach definition $definitions {
+        set type [lindex $definition 0]
+        switch -- $type {
+            slider {
+                lassign $definition _ name label from to initial res
+                dict set created $name [ui::window::createSliderControl $parent $name $label $from $to $initial $res]
+            }
+            combo {
+                lassign $definition _ name label values variableName
+                dict set created $name [ui::window::createComboControl $parent $name $label $values $variableName]
+            }
+            button {
+                lassign $definition _ name text command
+                dict set created $name [ui::window::createActionButton $parent $name $text $command]
+            }
+        }
+    }
+    return $created
+}
+
+
 
 proc ui::window::collectSectionParamOverrides {sectionName} {
     set overrides [dict create]
@@ -232,243 +317,75 @@ proc ui::window::createMainWindow {} {
     set overviewFrame [ui::canvas::widget $sidebarInner frame overview -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
     pack $overviewFrame -fill x -padx 14 -pady {0 14}
 
-    ui::window::createToolHeader $overviewFrame
+    # ui::window::createToolHeader $overviewFrame
     #
+
+    # 
+    # Mode Selection 
+    # 
+    set modeFrame [ui::window::createSection $sidebarInner moe "Tool"]
+    ui::window::createActiveText $modeFrame modeLabel "Active Tool: select"
+    set modeControls [ui::window::buildControls $modeFrame {
+        {button changeMode "Switch Tool" controller::tools::toggleTool}
+    }]
+    
+    # 
     # BGA Geometry Section
     #
-
-    set geometryFrame [ui::canvas::widget $sidebarInner frame geometry -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
-
-    pack $geometryFrame \
-        -fill x \
-        -padx 14 \
-        -pady {0 12}
-
-    set geometryTitle [ui::canvas::widget $geometryFrame label title \
-        -text "BGA Geometry" \
-        -bg "#2a2d31" \
-        -fg white \
-        -font {Helvetica 11 bold}]
-
-    pack $geometryTitle \
-        -anchor w \
-        -padx 12 \
-        -pady {10 16}
+    set geometryFrame [ui::window::createSection $sidebarInner geometry "BGA Geometry"]
+    #
+    # Rows and Cols Controls
+    #
+    set geometryControls [ui::window::buildControls $geometryFrame {
+        # _ name label from to initial resolution
+        {slider rows "Rows" 2 20 3 1}
+        {slider cols "Cols" 2 20 3 1}
+    }]
+    set rowsSlider [dict get $geometryControls rows]
+    set colsSlider [dict get $geometryControls cols]
 
     #
-    # Rows Control
+    # segWidth and length
     #
+    set segFrame [ui::window::createSection $sidebarInner segment "Segment control"]
 
-    set rowsFrame [ui::canvas::widget $geometryFrame frame rows -bg "#2a2d31"]
+    set segmentControls [ui::window::buildControls $segFrame {
+        # _ name label from to initial resolution
+        {slider width "Width" 0.1 0.4 0.1 0.1}
+        {slider length "Length" 0.1 0.4 0.1 0.1}
+    }]
+    set widthSlider [dict get $segmentControls width]
+    set lengthSlider [dict get $segmentControls length]
 
-    pack $rowsFrame \
-        -fill x \
-        -padx 12 \
-        -pady 6
-
-    set rowsLabel [ui::canvas::widget $rowsFrame label label -text "Rows" -bg "#2a2d31" -fg "#cccccc"]
-    set rowsValue [ui::canvas::widget $rowsFrame label value -text "3" -bg "#2a2d31" -fg "#4cc2ff"]
-    set rowsSlider [ui::canvas::widget $rowsFrame scale slider \
-        -from 2 \
-        -to 20 \
-        -orient horizontal \
-        -showvalue 0 \
-        -length 180 \
-        -bg "#2a2d31" \
-        -fg white \
-        -troughcolor "#3c3c3c" \
-        -activebackground "#4cc2ff" \
-        -highlightthickness 0 \
-        -borderwidth 0]
-
-    $rowsSlider set 3
-
-    pack $rowsLabel -side left
-    pack $rowsValue -side right
-    pack $rowsSlider -side bottom \
-        -fill x \
-        -pady {6 0}
-
-    #
-    # Cols Control
-    #
-
-    set colsFrame [ui::canvas::widget $geometryFrame frame cols -bg "#2a2d31"]
-
-    pack $colsFrame \
-        -fill x \
-        -padx 12 \
-        -pady 6
-
-    set colsLabel [ui::canvas::widget $colsFrame label label -text "Cols" -bg "#2a2d31" -fg "#cccccc"]
-    set colsValue [ui::canvas::widget $colsFrame label value -text "3" -bg "#2a2d31" -fg "#4cc2ff"]
-    set colsSlider [ui::canvas::widget $colsFrame scale slider \
-        -from 2 \
-        -to 20 \
-        -orient horizontal \
-        -showvalue 0 \
-        -length 180 \
-        -bg "#2a2d31" \
-        -fg white \
-        -troughcolor "#3c3c3c" \
-        -activebackground "#4cc2ff" \
-        -highlightthickness 0 \
-        -borderwidth 0]
-
-    $colsSlider set 3
-
-    pack $colsLabel -side left
-    pack $colsValue -side right
-    pack $colsSlider -side bottom \
-        -fill x \
-        -pady {6 0}
-
-    #
-    # Slider Value Updates
-    #
-    bind $rowsSlider <Motion> [list apply {{rowsValue rowsSlider} {
-        $rowsValue configure -text [$rowsSlider get]
-    }} $rowsValue $rowsSlider]
-
-    bind $colsSlider <Motion> [list apply {{colsValue colsSlider} {
-        $colsValue configure -text [$colsSlider get]
-    }} $colsValue $colsSlider]
-
+    
     #
     # Action Panel
     #
-    set actionFrame [ui::canvas::widget $sidebarInner frame actionPanel -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
-    pack $actionFrame -fill x -padx 14 -pady {0 12}
+    set actionFrame [ui::window::createSection $sidebarInner actionPanel "Actions"]
 
-    set actionTitle [ui::canvas::widget $actionFrame label title \
-        -text "Actions" \
-        -bg "#2a2d31" \
-        -fg white \
-        -font {Helvetica 11 bold}]
-    pack $actionTitle -anchor w -padx 12 -pady {10 8}
-
-    set applyButton [ui::canvas::widget $actionFrame button apply \
-        -text "Apply Changes" \
-        -bg "#2f78c7" \
-        -fg "#eff6ff" \
-        -activebackground "#3d8df0" \
-        -activeforeground "#ffffff" \
-        -relief flat \
-        -borderwidth 0 \
-        -padx 10 \
-        -pady 10 \
-        -command controller::applyAndEnableSelection]
-
-    pack $applyButton -fill x -padx 12 -pady {0 8}
-
-
-    #
-    # Render Diagnostics
-    #
-    
-
-    # set diagnosticsFrame [ui::canvas::widget $sidebarInner frame diagnostics -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
-
-    # pack $diagnosticsFrame \
-    #     -fill x \
-    #     -padx 14 \
-    #     -pady {0 18}
-
-    # set diagnosticsTitle [ui::canvas::widget $diagnosticsFrame label title \
-    #     -text "Render Diagnostics" \
-    #     -bg "#2a2d31" \
-    #     -fg white \
-    #     -font {Helvetica 11 bold}]
-
-    # pack $diagnosticsTitle \
-    #     -anchor w \
-    #     -padx 12 \
-    #     -pady {10 10}
-
-    # set diagnosticsRun [ui::canvas::widget $diagnosticsFrame button run \
-    #     -text "Run Render Tests" \
-    #     -bg "#3b556d" \
-    #     -fg "#edf3f8" \
-    #     -activebackground "#4a738f" \
-    #     -activeforeground "#ffffff" \
-    #     -relief flat \
-    #     -borderwidth 0 \
-    #     -padx 10 \
-    #     -pady 8 \
-    #     -command controller::runRenderDiagnostics]
-
-    # pack $diagnosticsRun \
-    #     -fill x \
-    #     -padx 12 \
-    #     -pady {0 8}
-
-    # set diagnosticsResult [ui::canvas::widget $diagnosticsFrame label result \
-    #     -text "Not run" \
-    #     -bg "#2a2d31" \
-    #     -fg "#cccccc" \
-    #     -anchor w \
-    #     -justify left \
-    #     -wraplength 230]
-
-    # pack $diagnosticsResult \
-        -fill x \
-        -padx 12 \
-        -pady {0 12}
-
+    set actionControls [ui::window::buildControls $actionFrame {
+        # _ name label command
+        {button apply "Apply Changes" controller::applyAndEnableSelection}
+    }]
+    set applyButton [dict get $actionControls apply]
 
     # Policy Panel
-    set structurePolicyFrame [ui::canvas::widget $sidebarInner frame prefsPanel -bg "#2a2d31" -highlightbackground "#3b3f46" -highlightthickness 1]
-    pack $structurePolicyFrame -fill x -padx 14 -pady {0 18}
+    set structurePolicyFrame [ui::window::createSection $sidebarInner prefsPanel "Policies"]
 
-    set policyTitle [ui::canvas::widget $structurePolicyFrame label title \
-        -text "Policies" \
-        -bg "#2a2d31" \
-        -fg white \
-        -font {Helvetica 11 bold}]
-    pack $policyTitle -anchor w -padx 12 -pady {10 8}
-
-    set policyLabel [ui::canvas::widget $structurePolicyFrame label policyLabel \
-        -text "Structure preset" \
-        -bg "#2a2d31" \
-        -fg "#cccccc"]
-    pack $policyLabel -anchor w -padx 12
-
-    set structurePolicyCombo [ui::canvas::widget $structurePolicyFrame combobox structurePolicyCombo \
-        -values [lsort [array names ::fanout::structures::registry]] \
-        -state readonly \
-        -textvariable ::ui::window::structurePreset]
+    set structurePolicyControl [ui::window::createComboControl $structurePolicyFrame structurePolicy "Structure preset" [lsort [array names ::fanout::structures::registry]] ::ui::window::structurePreset]
+    set structurePolicyCombo [dict get $structurePolicyControl combo]
     set ::ui::window::structurePreset basic
+
     pack $structurePolicyCombo -fill x -padx 12 -pady {4 10}
 
     bind $structurePolicyCombo <<ComboboxSelected>> "ui::window::refreshSectionParamOverrideControls $structurePolicyFrame \[%W get\] policy"
     ui::window::refreshSectionParamOverrideControls $structurePolicyFrame $::ui::window::structurePreset policy
 
     # via Panel
-    set structureViaFrame [ui::canvas::widget $sidebarInner frame viaPanel \
-    -bg "#2a2d31" \
-    -highlightbackground "#3b3f46" \
-    -highlightthickness 1]
+    set structureViaFrame [ui::window::createSection $sidebarInner viaPanel "Via Configuration"]
 
-    pack $structureViaFrame -fill x -padx 14 -pady {0 18}
-
-    set viaTitle [ui::canvas::widget $structureViaFrame label title \
-        -text "Via Configuration" \
-        -bg "#2a2d31" \
-        -fg white \
-        -font {Helvetica 11 bold}]
-    pack $viaTitle -anchor w -padx 12 -pady {10 8}
-
-    set structureViaLabel [ui::canvas::widget $structureViaFrame label policyLabel \
-        -text "via Structure preset" \
-        -bg "#2a2d31" \
-        -fg "#cccccc"]
-    pack $structureViaLabel -anchor w -padx 12
-
-    set structureViaCombo [ui::canvas::widget $structureViaFrame combobox structurePolicyCombo \
-        -values [lsort [array names ::fanout::structures::viaTypes]] \
-        -state readonly \
-        -textvariable ::ui::window::viaStructurePreset]
-
+    set structureViaControl [ui::window::createComboControl $structureViaFrame viaStructure "Via structure preset" [lsort [array names ::fanout::structures::viaTypes]] ::ui::window::viaStructurePreset]
+    set structureViaCombo [dict get $structureViaControl combo]
     set ::ui::window::viaStructurePreset through
     pack $structureViaCombo -fill x -padx 12 -pady {4 10}
 

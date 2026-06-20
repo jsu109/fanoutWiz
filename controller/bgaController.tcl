@@ -5,8 +5,8 @@ proc controller::applyBGA {} {
 
     
 
-    set rows [expr {int([.root.sidebar.inner.geometry.rows.slider get])}]
-    set cols [expr {int([.root.sidebar.inner.geometry.cols.slider get])}]
+    set rows [controller::state::get "rows"]
+    set cols [controller::state::get "cols"]
 
     set ::controller::state::bga [model::bga::createBGA $rows $cols]
     set ::model::bga $::controller::state::bga
@@ -170,8 +170,8 @@ proc controller::runRenderDiagnostics {} {
 }
 
 proc controller::applyAndEnableSelection {} {
-    set rows [expr {int([.root.sidebar.inner.geometry.rows.slider get])}]
-    set cols [expr {int([.root.sidebar.inner.geometry.cols.slider get])}]
+    set rows [controller::state::get "rows"]
+    set cols [controller::state::get "cols"]
 
     set structureName basic
     if {[info exists ::ui::window::structurePreset]} {
@@ -184,6 +184,9 @@ proc controller::applyAndEnableSelection {} {
 
     set ::controller::state::bga [model::bga::createBGA $rows $cols]
     set ::model::bga $::controller::state::bga
+
+    controller::tools::setActiveTool
+    set tool $::controller::activeTool
 
     ui::status::set "Selection enabled"
     controller::build $structureName

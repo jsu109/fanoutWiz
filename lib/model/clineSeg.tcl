@@ -49,6 +49,7 @@ proc model::clineSeg::generateSegs {segDef} {
     set segs {}
 
     set width  [dict get $segDef width]
+    puts $width
     set length [dict get $segDef length]
     set angle  [dict get $segDef angle]
 

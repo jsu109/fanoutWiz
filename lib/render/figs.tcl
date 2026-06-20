@@ -58,6 +58,7 @@ proc render::figs::drawline {canvas pos1 pos2} {
             $x1 $y1 $x2 $y2 \
             -fill white \
             -width $lineWidth \
-            
+            -tags {measurementLine}
         # need to work out how to do tags so i can keep track of these lines
 }
+

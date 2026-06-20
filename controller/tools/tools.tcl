@@ -10,6 +10,7 @@ set ::controller::tool(measure) {label "MEASURE MODE" next "select"  hint "Click
 proc controller::tools::setActiveTool {{tool select}} {
     set ::controller::activeTool $tool
     ui::status::set "Active Tool: $tool"
+    ui::window::setActiveText modeLabel "Active Tool: $tool"
 }
 proc controller::tools::getTool {} {
 
@@ -22,4 +23,20 @@ proc controller::tools::getTool {} {
             return {controller::selection::measureSelect}
         }
     }
+}
+
+
+proc controller::tools::getNextTool {} {
+    set current $::controller::activeTool
+
+    if {![info exists ::controller::tool($current)]} {
+        return select
+    }
+
+    return [dict get $::controller::tool($current) next]
+}
+
+proc controller::tools::toggleTool {} {
+    set next [controller::tools::getNextTool]
+    controller::tools::setActiveTool $next
 }
