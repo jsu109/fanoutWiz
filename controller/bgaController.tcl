@@ -1,27 +1,61 @@
 namespace eval controller {}
 
+proc controller::updateStructureConfig {args} {
+    if {[llength $args] < 2} {
+        error "controller::updateStructureConfig requires a path and value"
+    }
 
-proc controller::applyBGA {} {
-
-    
-
-    set rows [controller::state::get "rows"]
-    set cols [controller::state::get "cols"]
-
-    set ::controller::state::bga [model::bga::createBGA $rows $cols]
-    set ::model::bga $::controller::state::bga
-
-    controller::build basic
+    set value [lindex $args end]
+    set path [lrange $args 0 end-1]
+    set config [controller::state::get structureConfig]
+    dict set config {*}$path $value
+    controller::state::set structureConfig $config
+    return $config
 }
-proc controller::collectFrame {structureName} {
 
-    set bga $::model::bga
-    set seg $::model::clineSeg
+proc controller::setStructurePreset {structureName} {
+    set preset [string tolower $structureName]
+    set current [controller::state::get structureConfig]
+    set config [controller::state::createStructureConfig $preset]
 
-    set pads [model::bga::generatePads $bga]
-    set fanout [model::fanout::createFanout $bga $structureName] 
+    foreach section {bga rules policy spacing clineSeg vias} {
+        if {[dict exists $current $section]} {
+            dict set config $section [dict get $current $section]
+        }
+    }
+
+    if {[info exists ::controller::binding::map]} {
+        foreach key [array names ::controller::binding::map] {
+            set path [split $::controller::binding::map($key) "."]
+            if {[dict exists $current {*}$path]} {
+                dict set config {*}$path [dict get $current {*}$path]
+            }
+        }
+    }
+
+    controller::state::set structureConfig $config
+    return $config
+}
+
+proc controller::buildStructure {} {
+    set structure [model::structure::createStructure \
+        [controller::state::get structureConfig]]
+    controller::state::set structure $structure
+    return $structure
+}
+
+proc controller::collectFrame {} {
+    if {![controller::state::exists structure]} {
+        error "Cannot collect render frame before building a structure"
+    }
+
+    set structure [controller::state::get structure]
+    set bga [dict get $structure bga]
+    set pads [dict get $structure pads]
+    set fanout [dict get $structure fanout]
+    
     set segs [model::fanoutCompiler::compile $fanout]
-    set vias [model::via::collectFromFanout $fanout]
+    set vias [dict get $structure vias]
     
     set features {}
     lappend features {*}[model::measure::normalisePads $pads]
@@ -45,6 +79,7 @@ proc controller::collectFrame {structureName} {
     set worldH [expr {2 * ($halfHeight + $padRadius)}]
 
     return [dict create \
+        bga $bga \
         pads $pads \
         segs $segs \
         vias $vias \
@@ -53,12 +88,16 @@ proc controller::collectFrame {structureName} {
         worldH $worldH]
 }
 
-proc controller::build {structureName} {
+proc controller::build {{structureName {}}} {
+    if {$structureName ne ""} {
+        set currentPreset [controller::state::get structureConfig preset]
+        if {$currentPreset ne [string tolower $structureName]} {
+            controller::setStructurePreset $structureName
+        }
+    }
 
     $::render::canvas delete all
-
-    # Single source of truth for renderable scene bounds
-    set frame [controller::collectFrame $structureName]
+    set frame [controller::collectFrame]
     set ::controller::lastFrame $frame
     set ch [winfo height $::render::canvas]
     set cw [winfo width $::render::canvas]
@@ -121,6 +160,7 @@ proc controller::validateRenderedClines {canvas} {
 }
 
 proc controller::runRenderDiagnostics {} {
+    controller::buildStructure
     controller::build
 
     set frame $::controller::lastFrame
@@ -170,24 +210,31 @@ proc controller::runRenderDiagnostics {} {
 }
 
 proc controller::applyAndEnableSelection {} {
-    set rows [controller::state::get "rows"]
-    set cols [controller::state::get "cols"]
-
     set structureName basic
     if {[info exists ::ui::window::structurePreset]} {
         set structureName [string tolower $::ui::window::structurePreset]
     }
-
-    if {[info exists ::fanout::structures::registry($structureName)]} {
-        ui::window::applySectionParamOverrides $structureName policy
+    if {[controller::state::get structureConfig preset] ne $structureName} {
+        controller::setStructurePreset $structureName
     }
 
-    set ::controller::state::bga [model::bga::createBGA $rows $cols]
-    set ::model::bga $::controller::state::bga
+    if {[info exists ::fanout::structures::registry($structureName)]} {
+        controller::updateStructureConfig policy \
+            [ui::window::collectSectionParamOverrides policy]
+    }
+
+    if {[info exists ::ui::window::viaStructurePreset]} {
+        set viaName [string tolower $::ui::window::viaStructurePreset]
+        if {[info exists ::fanout::structures::viaTypes($viaName)]} {
+            controller::updateStructureConfig vias active \
+                $::fanout::structures::viaTypes($viaName)
+        }
+    }
 
     controller::tools::setActiveTool
     set tool $::controller::activeTool
 
     ui::status::set "Selection enabled"
-    controller::build $structureName
+    controller::buildStructure
+    controller::build
 }

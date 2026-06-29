@@ -41,15 +41,16 @@ proc controller::onModeChanged {mode} {
 
 proc controller::onBGAChanged {rows cols} {
 
-    set ::controller::state::bga \
-        [model::bga::createBGA $rows $cols]
-
-    controller::dispatch BUILD basic
+    controller::updateStructureConfig bga rows $rows
+    controller::updateStructureConfig bga cols $cols
+    controller::buildStructure
+    controller::dispatch BUILD
 }
 
 proc controller::onStructureChanged {structure} {
-    set ::controller::state::structure $structure
-    controller::dispatch BUILD $structure
+    controller::setStructurePreset $structure
+    controller::buildStructure
+    controller::dispatch BUILD
 }
 
 proc controller::onPadSelected {padName} {

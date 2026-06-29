@@ -2,7 +2,6 @@ namespace eval model::via {}
 
 proc model::via::definitionFromStructure {{structureName basic}} {
 
-    set structureName [model::via::resolveStructureName $structureName]
     set structure [model::topology::getStructure $structureName]
 
     if {![dict exists $structure via]} {
@@ -24,6 +23,10 @@ proc model::via::definitionFromStructure {{structureName basic}} {
     return $viaDef
 }
 proc model::via::resolveStructureName {structureName} {
+    if {[catch {dict exists $structureName id} hasId] == 0 && $hasId} {
+        return [dict get $structureName id]
+    }
+
     if {[info exists ::fanout::structures::registry($structureName)]} {
         return $structureName
     }
@@ -56,7 +59,6 @@ proc model::via::checkStructurePolicies {padContext structure} {
         return 1}
 }
 proc model::via::createForPad {padId padClines padContext {structureName basic}} {
-    set structureName [model::via::resolveStructureName $structureName]
     set structure [model::topology::getStructure $structureName]
 
     set viaDef [model::via::definitionFromStructure $structure]

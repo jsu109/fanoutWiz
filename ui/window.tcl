@@ -39,6 +39,7 @@ proc ui::window::setActiveText {name text} {
     }
 }
 proc ui::window::createSliderControl {parent name labelText from to initial res} {
+    set initial [ui::window::sliderInitialValue $name $initial]
 
     set controlFrame [ui::canvas::widget $parent frame $name -bg "#2a2d31"]
     pack $controlFrame -fill x -padx 12 -pady 6
@@ -64,19 +65,58 @@ proc ui::window::createSliderControl {parent name labelText from to initial res}
         -troughcolor "#3c3c3c" \
         -activebackground "#4cc2ff" \
         -highlightthickness 0 \
-        -borderwidth 0 \
-        -command [list ui::window::onSliderChanged $name]]
+        -borderwidth 0]
 
     $slider set $initial
+    $slider configure -command [list ui::window::onSliderChanged $name]
 
     pack $slider -side right -fill x -expand 1
 
     return $slider
 }
 
+proc ui::window::sliderInitialValue {name fallback} {
+    if {[info commands ::controller::state::get] eq ""} {
+        return $fallback
+    }
+
+    switch -- $name {
+        rows {
+            set value [::controller::state::get structureConfig bga rows]
+        }
+        cols {
+            set value [::controller::state::get structureConfig bga cols]
+        }
+        width {
+            set value [::controller::state::get structureConfig rules traceWidth]
+            if {$value ne ""} {
+                set value [units::toMm $value]
+            }
+        }
+        length {
+            set value [::controller::state::get structureConfig rules neckLength]
+            if {$value ne ""} {
+                set value [units::toMm $value]
+            }
+        }
+        default {
+            set value ""
+        }
+    }
+
+    if {$value eq ""} {
+        return $fallback
+    }
+
+    return $value
+}
+
 proc ui::window::onSliderChanged {args} {
     set key   [lindex $args 0]
     set value [lindex $args end]
+    if {$key in {width length}} {
+        set value [units::mm $value]
+    }
     controller::state::set $key $value
 }
 
@@ -139,13 +179,18 @@ proc ui::window::buildControls {parent definitions} {
 proc ui::window::collectSectionParamOverrides {sectionName} {
     set overrides [dict create]
     set prefix "::ui::window::${sectionName}_"
-    foreach var [info vars ::ui::window::policy_*] {
+    foreach var [info vars ${prefix}*] {
         set key [string range $var [string length $prefix] end]
         set value [set $var]
         dict set overrides $key [expr {$value ? yes : no}]
     }
     return $overrides
     
+}
+
+proc ui::window::onSectionFlagChanged {sectionName key varName} {
+    set value [expr {[set $varName] ? "yes" : "no"}]
+    controller::updateStructureConfig $sectionName $key $value
 }
 
 proc ui::window::applySectionParamOverrides {structureName sectionName} {
@@ -182,6 +227,15 @@ proc ui::window::refreshSectionParamOverrideControls {parent structureName secti
     set structure [model::topology::getStructure $structureName]
     set section [dict get $structure $sectionName]
 
+    if {[info commands controller::state::get] ne ""} {
+        set config [controller::state::get structureConfig]
+        if {[dict exists $config preset] &&
+            [string equal -nocase [dict get $config preset] $structureName] &&
+            [dict exists $config $sectionName]} {
+            set section [dict get $config $sectionName]
+        }
+    }
+
     set count 0
     dict for {key value} $section {
         if {![string equal -nocase $value yes] &&
@@ -207,7 +261,8 @@ proc ui::window::refreshSectionParamOverrideControls {parent structureName secti
 
         set checkbox [ui::canvas::widget $parent.${sectionName}List checkbutton policy_$key \
             -text [string map {_ { }} $key] \
-            -variable $varName]
+            -variable $varName \
+            -command [list ui::window::onSectionFlagChanged $sectionName $key $varName]]
         pack $checkbox -anchor w -pady 1
         incr count
     }
@@ -344,6 +399,9 @@ proc ui::window::createMainWindow {} {
     set rowsSlider [dict get $geometryControls rows]
     set colsSlider [dict get $geometryControls cols]
 
+    controller::binding::bind rows structureConfig.bga.rows
+    controller::binding::bind cols structureConfig.bga.cols
+
     #
     # segWidth and length
     #
@@ -356,6 +414,9 @@ proc ui::window::createMainWindow {} {
     }]
     set widthSlider [dict get $segmentControls width]
     set lengthSlider [dict get $segmentControls length]
+
+    controller::binding::bind width structureConfig.rules.traceWidth
+    controller::binding::bind length structureConfig.rules.neckLength
 
     
     #
@@ -378,7 +439,7 @@ proc ui::window::createMainWindow {} {
 
     pack $structurePolicyCombo -fill x -padx 12 -pady {4 10}
 
-    bind $structurePolicyCombo <<ComboboxSelected>> "ui::window::refreshSectionParamOverrideControls $structurePolicyFrame \[%W get\] policy"
+    bind $structurePolicyCombo <<ComboboxSelected>> "controller::setStructurePreset \[%W get\]; ui::window::refreshSectionParamOverrideControls $structurePolicyFrame \[%W get\] policy"
     ui::window::refreshSectionParamOverrideControls $structurePolicyFrame $::ui::window::structurePreset policy
 
     # via Panel

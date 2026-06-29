@@ -10,7 +10,7 @@ proc render::fanout::draw {canvas frame} {
 
     set pads [dict get $frame pads] 
     
-    render::pads::drawPads $canvas $pads $::model::bga
+    render::pads::drawPads $canvas $pads [dict get $frame bga]
     render::clineSeg::drawClineSegs $canvas $frame
     render::via::drawVias $canvas $frame
     

@@ -1,6 +1,10 @@
 namespace eval model::fanout {}
 
 proc model::fanout::resolveStructureName {structureName} {
+    if {[catch {dict exists $structureName id} hasId] == 0 && $hasId} {
+        return [dict get $structureName id]
+    }
+
     if {[info exists ::fanout::structures::registry($structureName)]} {
         return $structureName
     }
@@ -9,9 +13,9 @@ proc model::fanout::resolveStructureName {structureName} {
 }
 
 proc model::fanout::createFanout {bga {structureName basic}} {
-    set structureName [model::fanout::resolveStructureName $structureName]
-    set bgaRules [model::bga::deriveRules $bga]
     set structure [model::topology::getStructure $structureName]
+    set structureId [dict get $structure id]
+    set bgaRules [model::bga::deriveRules $bga]
     set pads [model::bga::generatePads $bga]
     set fanoutPads {}
     
@@ -26,9 +30,9 @@ proc model::fanout::createFanout {bga {structureName basic}} {
 
         set row [dict get $id row]
         set col [dict get $id col]
-        set padClines [model::topology::applyClineToPad $padId $id $bga $structureName]
+        set padClines [model::topology::applyClineToPad $padId $id $bga $structure]
         set padContext [model::topology::classifyPad $id $bga]
-        set via [model::via::createForPad $padId $padClines $padContext $structureName]
+        set via [model::via::createForPad $padId $padClines $padContext $structure]
         
         # ---------------------------------------
         # BUILD FANOUT IR
@@ -41,7 +45,7 @@ proc model::fanout::createFanout {bga {structureName basic}} {
     }
 
     return [dict create \
-        structure $structureName \
+        structure $structureId \
         bga [dict create \
             rows [dict get $bga rows] \
             cols [dict get $bga cols] \

@@ -14,6 +14,9 @@ proc model::topology::getTopologyProc {structure} {
     } $structure
 }
 proc model::topology::getStructure {name} {
+    if {[catch {dict exists $name id} hasId] == 0 && $hasId} {
+        return $name
+    }
 
     if {![info exists ::fanout::structures::registry($name)]} {
         error "Unknown structure: $name (available: [array names ::fanout::structures::registry])"
@@ -136,21 +139,24 @@ proc model::topology::calculateAllowedNeckLength {structure bga} {
         }
         set neckLength 0.0
     } else {
-        set spacingRules [dict get $structure spacing] 
-        set viaDef [dict get $structure via]
-        set rules [dict get $viaDef rules]
-        
-        set pitch [dict get $bga pitch]
-        set totalViaDiameter [model::via::totalDiameter $viaDef]
-        set bgaPadDiameter [dict get $bga padDiameter]
-        set viaToPad [dict get $spacingRules viaToPadSpacing]
-        
-        set clearanceRadius [expr {($totalViaDiameter + $bgaPadDiameter)/2.0 + $viaToPad}]
-        
-        set neckLength [expr {$pitch - (($totalViaDiameter + $bgaPadDiameter) / 2.0) - $viaToPad}]
-        # puts [units::um $neckLength]
+        if {[dict exists $structure rules neckLength]} {
+            set neckLength [dict get $structure rules neckLength]
+        } else {
+            set spacingRules [dict get $structure spacing] 
+            set viaDef [dict get $structure via]
+            set rules [dict get $viaDef rules]
+            
+            set pitch [dict get $bga pitch]
+            set totalViaDiameter [model::via::totalDiameter $viaDef]
+            set bgaPadDiameter [dict get $bga padDiameter]
+            set viaToPad [dict get $spacingRules viaToPadSpacing]
+            
+            set clearanceRadius [expr {($totalViaDiameter + $bgaPadDiameter)/2.0 + $viaToPad}]
+            
+            set neckLength [expr {$pitch - (($totalViaDiameter + $bgaPadDiameter) / 2.0) - $viaToPad}]
+        }
     }
-    return [units::um $neckLength]
+    return $neckLength
 }
 proc model::topology::generateEscapePlan {padContext structure bga} {
     set neckLength [model::topology::calculateAllowedNeckLength $structure $bga]
@@ -307,7 +313,7 @@ proc model::topology::compileEscapePlan {padName pad padContext structure escape
         neck $neck]
 }
 
-proc model::topology::applyClineToPad {padName pad bga structureName} {
+proc model::topology::applyClineToPad {padName pad bga structureDef} {
 
     # Fanout IR v1 padClines, completed by model::fanoutCompiler::compile:
     # padClines = {
@@ -323,7 +329,7 @@ proc model::topology::applyClineToPad {padName pad bga structureName} {
     #     }
     # }
     
-    set structure [model::topology::getStructure $structureName]
+    set structure [model::topology::getStructure $structureDef]
     set padContext [model::topology::classifyPad $pad $bga]
     
     set escapePlan [model::topology::generateEscapePlan $padContext $structure $bga]

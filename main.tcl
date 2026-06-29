@@ -19,18 +19,15 @@ source ui/status.tcl
 source ui/bindings.tcl
 source ui/format.tcl
 source units/conversions.tcl
+source lib/structures/structures.tcl
 source controller/state.tcl
 source controller/events.tcl
 source controller/selection.tcl
 source controller/orchestrator.tcl
 source controller/bgaController.tcl
 source view/view.tcl
-source lib/structures/structures.tcl
 
 set ::render::canvas [ui::window::createMainWindow]
 set ::render::unitConversion 1
-set ::model::bga [model::bga::createBGA]
 set ::model::clineSeg [model::clineSeg::createSeg]
-
-
 
