@@ -6,7 +6,6 @@ namespace eval controller::state {
 
 proc controller::state::createStructureConfig {{preset basic}} {
     ::set structure [model::topology::getStructure $preset]
-
     if {[dict exists $structure id]} {
         ::set preset [dict get $structure id]
     }
@@ -16,8 +15,8 @@ proc controller::state::createStructureConfig {{preset basic}} {
         rows 5 \
         cols 5 \
         pitch [units::mm 1] \
-        ballDiameter [units::mm 0.5] \
-        padScale 0.8 \
+        ballDiameter [units::mm 0.45] \
+        padScale 1 \
         defaultPadType circle]
 
     if {[dict exists $structure via]} {
@@ -46,30 +45,68 @@ namespace eval controller::state {
 namespace eval controller::binding {
     variable map
 }
-proc controller::binding::bind {key path} {
+proc controller::binding::bind {key path {converter ""}} {
     variable map
-    set map($key) $path
+    set map($key) [dict create path $path converter $converter]
+}
+proc controller::binding::exists {key} {
+    variable map
+    return [info exists map($key)]
+}
+proc controller::binding::get {key} {
+    variable map
+
+    if {![info exists map($key)]} {
+        return ""
+    }
+
+    return $map($key)
+}
+proc controller::binding::resolve {key value} {
+    variable map
+
+    if {![info exists map($key)]} {
+        error "No binding for key <$key>"
+    }
+
+    set binding $map($key)
+    set path [dict get $binding path]
+    set converter [dict get $binding converter]
+    set resolvedValue $value
+
+    if {$converter ne ""} {
+        if {[llength $converter] == 2} {
+            set converter [lindex $converter 0]
+        }
+        if {$converter ne ""} {
+            set resolvedValue [{*}$converter $value]
+        }
+    }
+
+    if {$path eq ""} {
+        return [list $key $resolvedValue]
+    }
+
+    set pathTokens [split $path {.}]
+    lappend pathTokens $resolvedValue
+    
+    return $pathTokens
 }
 
 proc controller::state::set {key value} {
     variable data
 
-    # check if key is bound
-    if {[info exists ::controller::binding::map($key)]} {
-        dict set data {*}[split $::controller::binding::map($key) "."] $value
-        return $value
-    }
-
-    # fallback: direct top-level dict key
-    if {[dict exists $data $key]} {
-        dict set data $key $value
-        return $value
+    if {[controller::binding::exists $key]} {
+        ::set pathValue [controller::binding::resolve $key $value]
+        ::set pathTokens [lrange $pathValue 0 end-1]
+        ::set resolvedValue [lindex $pathValue end]
+        dict set data {*}$pathTokens $resolvedValue
+        return $resolvedValue
     }
 
     dict set data $key $value
     return $value
 }
-
 
 proc controller::state::get {args} {
     variable data

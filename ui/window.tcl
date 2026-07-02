@@ -38,6 +38,33 @@ proc ui::window::setActiveText {name text} {
         $::ui::window::activeText($name) configure -text $text
     }
 }
+proc ui::window::createEntryControl {parent name labelText initial} {
+    set controlFrame [ui::canvas::widget $parent frame $name -bg "#2a2d31"]
+    pack $controlFrame -fill x -padx 12 -pady 6
+
+    set label [ui::canvas::widget $controlFrame label label \
+        -text $labelText \
+        -bg "#2a2d31" \
+        -fg "#cccccc"]
+    pack $label -side left
+
+    set varName ::ui::window::entry_$name
+    set $varName $initial
+
+    set entry [ui::canvas::widget $controlFrame entry entry \
+        -textvariable $varName \
+        -width 10]
+
+    pack $entry -side right
+
+    bind $entry <Return> [list ui::window::onEntryChanged $name $varName]
+    bind $entry <FocusOut> [list ui::window::onEntryChanged $name $varName]
+
+    return $entry
+}
+proc ui::window::onEntryChanged {key variableName} {
+    controller::state::set $key [set $variableName]
+}
 proc ui::window::createSliderControl {parent name labelText from to initial res} {
     set initial [ui::window::sliderInitialValue $name $initial]
 
@@ -97,6 +124,13 @@ proc ui::window::sliderInitialValue {name fallback} {
             set value [::controller::state::get structureConfig rules neckLength]
             if {$value ne ""} {
                 set value [units::toMm $value]
+            }
+        }
+        pitch {
+            
+            if {$value ne ""} {
+                set value [units::mm $value]
+                set value [::controller::state::get structureConfig bga pitch]
             }
         }
         default {
@@ -169,6 +203,10 @@ proc ui::window::buildControls {parent definitions} {
                 lassign $definition _ name text command
                 dict set created $name [ui::window::createActionButton $parent $name $text $command]
             }
+            entry {
+            lassign $definition _ name label initial
+            dict set created $name [ui::window::createEntryControl $parent $name $label $initial]
+        }
         }
     }
     return $created
@@ -392,15 +430,16 @@ proc ui::window::createMainWindow {} {
     # Rows and Cols Controls
     #
     set geometryControls [ui::window::buildControls $geometryFrame {
-        # _ name label from to initial resolution
-        {slider rows "Rows" 2 20 3 1}
-        {slider cols "Cols" 2 20 3 1}
+        {slider rows  "Rows"  2 20 3 1}
+        {slider cols  "Cols"  2 20 3 1}
+        {entry  pitch "Pitch (mm)" 1}
     }]
     set rowsSlider [dict get $geometryControls rows]
     set colsSlider [dict get $geometryControls cols]
 
-    controller::binding::bind rows structureConfig.bga.rows
-    controller::binding::bind cols structureConfig.bga.cols
+    controller::binding::bind rows  structureConfig.bga.rows
+    controller::binding::bind cols  structureConfig.bga.cols
+    controller::binding::bind pitch structureConfig.bga.pitch units::mm
 
     #
     # segWidth and length
@@ -409,8 +448,8 @@ proc ui::window::createMainWindow {} {
 
     set segmentControls [ui::window::buildControls $segFrame {
         # _ name label from to initial resolution
-        {slider width "Width" 0.1 0.4 0.1 0.1}
-        {slider length "Length" 0.1 0.4 0.1 0.1}
+        {slider width "Width" 0.1 0.4 0.1 0.05}
+        {slider length "Length" 0.1 0.4 0.1 0.05}
     }]
     set widthSlider [dict get $segmentControls width]
     set lengthSlider [dict get $segmentControls length]

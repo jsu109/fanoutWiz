@@ -50,7 +50,7 @@ set fanout::structures::registry(basic) [dict create \
         traceWidth [units::mm 0.35] \
         traceSpacing [units::mm 0.1] \
         clearance [units::mm 0.1] \
-        neckLength [units::um 100] \
+        neckLength [units::um 250] \
     ] \
     spacing [dict create \
         lineToLineSpacing [units::mm 0.1] \
@@ -89,7 +89,7 @@ set fanout::structures::registry(dogbone) [dict create \
         traceWidth [units::mm 0.1] \
         traceSpacing [units::mm 0.1] \
         clearance [units::mm 0.1] \
-        neckLength [units::um 100] \
+        neckLength [units::um 200] \
     ] \
     spacing [dict create \
         lineToLineSpacing [units::mm 0.1] \

@@ -95,7 +95,7 @@ proc controller::build {{structureName {}}} {
             controller::setStructurePreset $structureName
         }
     }
-
+    puts "necklength: [controller::state::get structureConfig rules neckLength]"
     $::render::canvas delete all
     set frame [controller::collectFrame]
     set ::controller::lastFrame $frame
