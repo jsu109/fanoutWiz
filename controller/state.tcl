@@ -19,11 +19,12 @@ proc controller::state::createStructureConfig {{preset basic}} {
         padScale 1 \
         defaultPadType circle]
 
-    if {[dict exists $structure via]} {
-        dict set structure vias active [dict get $structure via]
-    } elseif {[info exists ::fanout::structures::viaTypes(through)]} {
-        dict set structure via $::fanout::structures::viaTypes(through)
-        dict set structure vias active $::fanout::structures::viaTypes(through)
+    if {![dict exists $structure via]} {
+        dict set structure via [dict create \
+            rules [dict create \
+                holeDiameter [units::mm 0.1] \
+                annularRing [units::mm 0.125] \
+            ]]
     }
 
     return $structure
@@ -62,6 +63,15 @@ proc controller::binding::get {key} {
 
     return $map($key)
 }
+proc controller::binding::path {key} {
+    variable map
+
+    if {![info exists map($key)]} {
+        return ""
+    }
+
+    return [dict get $map($key) path]
+}
 proc controller::binding::resolve {key value} {
     variable map
 
@@ -89,8 +99,36 @@ proc controller::binding::resolve {key value} {
 
     set pathTokens [split $path {.}]
     lappend pathTokens $resolvedValue
-    
+
     return $pathTokens
+}
+
+proc controller::binding::format {key value} {
+    variable map
+
+    if {![info exists map($key)]} {
+        return $value
+    }
+
+    set binding $map($key)
+    set converter [dict get $binding converter]
+    if {$converter eq ""} {
+        return $value
+    }
+
+    if {[llength $converter] == 2} {
+        set formatter [lindex $converter 1]
+        if {$formatter ne ""} {
+            return [{*}$formatter $value]
+        }
+    } elseif {[llength $converter] == 1} {
+        set formatter [lindex $converter 0]
+        if {$formatter ne ""} {
+            return [{*}$formatter $value]
+        }
+    }
+
+    return $value
 }
 
 proc controller::state::set {key value} {
@@ -99,12 +137,14 @@ proc controller::state::set {key value} {
     if {[controller::binding::exists $key]} {
         ::set pathValue [controller::binding::resolve $key $value]
         ::set pathTokens [lrange $pathValue 0 end-1]
+        puts $pathTokens
         ::set resolvedValue [lindex $pathValue end]
         dict set data {*}$pathTokens $resolvedValue
         return $resolvedValue
     }
 
     dict set data $key $value
+    puts [dict keys $data ]
     return $value
 }
 

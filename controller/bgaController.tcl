@@ -18,10 +18,17 @@ proc controller::setStructurePreset {structureName} {
     set current [controller::state::get structureConfig]
     set config [controller::state::createStructureConfig $preset]
 
-    foreach section {bga rules policy spacing clineSeg vias} {
+    foreach section {bga rules policy spacing clineSeg} {
         if {[dict exists $current $section]} {
             dict set config $section [dict get $current $section]
         }
+    }
+
+    # Special handling for via: merge rules only, preserve preset type/id
+    if {[dict exists $current via] && [dict exists $current via rules]} {
+        set currentViaRules [dict get $current via rules]
+        # Preserve preset via metadata, but apply custom rules if present
+        dict set config via rules $currentViaRules
     }
 
     if {[info exists ::controller::binding::map]} {
@@ -95,7 +102,7 @@ proc controller::build {{structureName {}}} {
             controller::setStructurePreset $structureName
         }
     }
-    puts "necklength: [controller::state::get structureConfig rules neckLength]"
+    puts "viaDiameter: [controller::state::get structureConfig via rules ]"
     $::render::canvas delete all
     set frame [controller::collectFrame]
     set ::controller::lastFrame $frame
@@ -226,7 +233,7 @@ proc controller::applyAndEnableSelection {} {
     if {[info exists ::ui::window::viaStructurePreset]} {
         set viaName [string tolower $::ui::window::viaStructurePreset]
         if {[info exists ::fanout::structures::viaTypes($viaName)]} {
-            controller::updateStructureConfig vias active \
+            controller::updateStructureConfig via \
                 $::fanout::structures::viaTypes($viaName)
         }
     }

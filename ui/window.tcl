@@ -38,7 +38,28 @@ proc ui::window::setActiveText {name text} {
         $::ui::window::activeText($name) configure -text $text
     }
 }
+proc ui::window::entryInitialValue {name fallback} {
+    if {[info commands ::controller::state::get] eq ""} {
+        return $fallback
+    }
+
+    if {[controller::binding::exists $name]} {
+        set path [controller::binding::path $name]
+        if {$path ne ""} {
+            set pathTokens [split $path {.}]
+            set value [::controller::state::get {*}$pathTokens]
+            if {$value ne ""} {
+                return [controller::binding::format $name $value]
+            }
+        }
+    }
+
+    return $fallback
+}
+
 proc ui::window::createEntryControl {parent name labelText initial} {
+    set initial [ui::window::entryInitialValue $name $initial]
+
     set controlFrame [ui::canvas::widget $parent frame $name -bg "#2a2d31"]
     pack $controlFrame -fill x -padx 12 -pady 6
 
@@ -107,50 +128,23 @@ proc ui::window::sliderInitialValue {name fallback} {
         return $fallback
     }
 
-    switch -- $name {
-        rows {
-            set value [::controller::state::get structureConfig bga rows]
-        }
-        cols {
-            set value [::controller::state::get structureConfig bga cols]
-        }
-        width {
-            set value [::controller::state::get structureConfig rules traceWidth]
+    if {[controller::binding::exists $name]} {
+        set path [controller::binding::path $name]
+        if {$path ne ""} {
+            set pathTokens [split $path {.}]
+            set value [::controller::state::get {*}$pathTokens]
             if {$value ne ""} {
-                set value [units::toMm $value]
+                return [controller::binding::format $name $value]
             }
-        }
-        length {
-            set value [::controller::state::get structureConfig rules neckLength]
-            if {$value ne ""} {
-                set value [units::toMm $value]
-            }
-        }
-        pitch {
-            
-            if {$value ne ""} {
-                set value [units::mm $value]
-                set value [::controller::state::get structureConfig bga pitch]
-            }
-        }
-        default {
-            set value ""
         }
     }
 
-    if {$value eq ""} {
-        return $fallback
-    }
-
-    return $value
+    return $fallback
 }
 
 proc ui::window::onSliderChanged {args} {
     set key   [lindex $args 0]
     set value [lindex $args end]
-    if {$key in {width length}} {
-        set value [units::mm $value]
-    }
     controller::state::set $key $value
 }
 
@@ -429,22 +423,27 @@ proc ui::window::createMainWindow {} {
     #
     # Rows and Cols Controls
     #
+    controller::binding::bind rows  structureConfig.bga.rows
+    controller::binding::bind cols  structureConfig.bga.cols
+    controller::binding::bind pitch structureConfig.bga.pitch {units::mm units::toMm}
+    controller::binding::bind ballDiameter structureConfig.bga.ballDiameter {units::mm units::toMm}
+
     set geometryControls [ui::window::buildControls $geometryFrame {
         {slider rows  "Rows"  2 20 3 1}
         {slider cols  "Cols"  2 20 3 1}
         {entry  pitch "Pitch (mm)" 1}
+        {entry  ballDiameter "Pad Diameter (mm)" 0.45}
     }]
     set rowsSlider [dict get $geometryControls rows]
     set colsSlider [dict get $geometryControls cols]
-
-    controller::binding::bind rows  structureConfig.bga.rows
-    controller::binding::bind cols  structureConfig.bga.cols
-    controller::binding::bind pitch structureConfig.bga.pitch units::mm
 
     #
     # segWidth and length
     #
     set segFrame [ui::window::createSection $sidebarInner segment "Segment control"]
+
+    controller::binding::bind width structureConfig.rules.traceWidth {units::mm units::toMm}
+    controller::binding::bind length structureConfig.rules.neckLength {units::mm units::toMm}
 
     set segmentControls [ui::window::buildControls $segFrame {
         # _ name label from to initial resolution
@@ -453,9 +452,6 @@ proc ui::window::createMainWindow {} {
     }]
     set widthSlider [dict get $segmentControls width]
     set lengthSlider [dict get $segmentControls length]
-
-    controller::binding::bind width structureConfig.rules.traceWidth
-    controller::binding::bind length structureConfig.rules.neckLength
 
     
     #
@@ -483,6 +479,14 @@ proc ui::window::createMainWindow {} {
 
     # via Panel
     set structureViaFrame [ui::window::createSection $sidebarInner viaPanel "Via Configuration"]
+
+    controller::binding::bind holeDiameter structureConfig.via.rules.holeDiameter {units::mm units::toMm}
+    controller::binding::bind annularRing structureConfig.via.rules.annularRing {units::mm units::toMm}
+    # todo get set and get via state instance properly.
+    set viaControls [ui::window::buildControls $structureViaFrame {
+        {entry holeDiameter "Hole Diameter (mm)" 0.1}
+        {entry annularRing "Annular Ring (mm)" 0.125}
+    }]
 
     set structureViaControl [ui::window::createComboControl $structureViaFrame viaStructure "Via structure preset" [lsort [array names ::fanout::structures::viaTypes]] ::ui::window::viaStructurePreset]
     set structureViaCombo [dict get $structureViaControl combo]

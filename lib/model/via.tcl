@@ -1,11 +1,10 @@
 namespace eval model::via {}
 
-proc model::via::definitionFromStructure {{structureName basic}} {
-
-    set structure [model::topology::getStructure $structureName]
+proc model::via::definitionFromStructure {structure} {
 
     if {![dict exists $structure via]} {
-        error "Structure [dict get $structure id] missing via definition"
+        set id [dict exists $structure id]
+        error "Structure $id missing via definition"
     }
 
     set viaDef [dict get $structure via]
@@ -58,9 +57,7 @@ proc model::via::checkStructurePolicies {padContext structure} {
     } else {
         return 1}
 }
-proc model::via::createForPad {padId padClines padContext {structureName basic}} {
-    set structure [model::topology::getStructure $structureName]
-
+proc model::via::createForPad {padId padClines padContext structure} {
     set viaDef [model::via::definitionFromStructure $structure]
     set rules [dict get $viaDef rules]
     set neckGeometry [dict get $padClines neck]
