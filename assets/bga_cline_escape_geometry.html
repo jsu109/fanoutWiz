@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>BGA Cline Escape Geometry</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+}
+svg {
+    background: white;
+    border: 1px solid #aaa;
+}
+.pad { fill: #ddd; stroke: black; stroke-width: 2; }
+.via { fill: white; stroke: black; stroke-width: 3; }
+.trace { stroke: black; stroke-width: 8; fill: none; }
+.neck { stroke: #555; stroke-width: 12; fill:none; }
+.label { font-size: 18px; }
+</style>
+</head>
+<body>
+
+<h2>BGA Pad Escape Geometry Concepts</h2>
+
+<svg width="900" height="500" viewBox="0 0 900 500">
+
+<!-- Direct escape -->
+<text x="100" y="40" class="label">1. Basic escape</text>
+<circle cx="150" cy="120" r="35" class="pad"/>
+<line x1="150" y1="155" x2="150" y2="260" class="trace"/>
+<text x="110" y="310" class="label">PAD → cline</text>
+
+
+<!-- Dogbone -->
+<text x="350" y="40" class="label">2. Dogbone escape</text>
+<circle cx="450" cy="120" r="35" class="pad"/>
+<line x1="450" y1="155" x2="450" y2="210" class="neck"/>
+<circle cx="450" cy="260" r="18" class="via"/>
+<text x="400" y="310" class="label">PAD → neck → via</text>
+
+
+<!-- Diagonal -->
+<text x="650" y="40" class="label">3. Diagonal escape</text>
+<circle cx="700" cy="120" r="35" class="pad"/>
+<line x1="700" y1="155" x2="780" y2="240" class="trace"/>
+<circle cx="800" cy="260" r="18" class="via"/>
+<text x="650" y="310" class="label">angled escape</text>
+
+
+<!-- Quadrant example -->
+<text x="300" y="370" class="label">Quadrant dogbone direction</text>
+
+<circle cx="450" cy="430" r="25" class="pad"/>
+<circle cx="350" cy="330" r="10" class="via"/>
+<circle cx="550" cy="330" r="10" class="via"/>
+<circle cx="350" cy="530" r="10" class="via"/>
+<circle cx="550" cy="530" r="10" class="via"/>
+
+<line x1="430" y1="410" x2="350" y2="330" class="trace"/>
+<line x1="470" y1="410" x2="550" y2="330" class="trace"/>
+
+<text x="390" y="470" class="label">BGA centre</text>
+
+</svg>
+
+<p>
+This represents the next abstraction for fanoutWiz:
+a pad escape is a collection of segments and optional vias,
+not a single line.
+</p>
+
+</body>
+</html>

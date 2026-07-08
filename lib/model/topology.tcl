@@ -1,51 +1,28 @@
 namespace eval model::topology {}
 
-if {![llength [info commands ui::status::set]]} {
-    namespace eval ui::status {}
-    proc ui::status::set {msg} {}
-}
-
-proc model::topology::getTopologyProc {structure} {
-
-    dict get {
-        orthogonal model::topology::orthogonalEscape
-        diagonal   model::topology::diagonalEscape
-        NSEW  model::topology::NSEW
-    } $structure
-}
+# Retrieve structure dictionary by name or return dict if already provided
 proc model::topology::getStructure {name} {
     if {[catch {dict exists $name id} hasId] == 0 && $hasId} {
         return $name
     }
-
     if {![info exists ::fanout::structures::registry($name)]} {
         error "Unknown structure: $name (available: [array names ::fanout::structures::registry])"
     }
-
     return $::fanout::structures::registry($name)
 }
 
+# Classify pad position and context within the BGA array
 proc model::topology::classifyPad {padId bga} {
     set rows [dict get $bga rows]
     set cols [dict get $bga cols]
-    
     set padRow [dict get $padId row]
     set padCol [dict get $padId col]
-
     set centerRow [expr {($rows - 1) / 2.0}]
     set centerCol [expr {($cols - 1) / 2.0}]
-
     set dRow [expr {$padRow - $centerRow}]
     set dCol [expr {$padCol - $centerCol}]
-    
     set ringDepth [expr {max(abs($dRow), abs($dCol))}]
-    
-    # NW dRow <0, dCol <0
-    # NE dRow <0, dCol >0
-    # SW dRow >0, dCol <0
-    # SE dRow >0, dCol >0
 
-    # Determine quadrant
     if {$dRow < 0 && $dCol < 0} {
         set quadrant NW
     } elseif {$dRow < 0 && $dCol >= 0} {
@@ -55,11 +32,6 @@ proc model::topology::classifyPad {padId bga} {
     } else {
         set quadrant SE
     }
-    # if {abs($dRow) < 0.5 && abs($dCol) < 0.5} {
-    # set quadrant CENTER
-    # }
-
-    # Determine edge (logic assumes row/col 0th start index). 
 
     set isTop    [expr {$padRow == 0}]
     set isBottom [expr {$padRow == ($rows - 1)}]
@@ -67,274 +39,208 @@ proc model::topology::classifyPad {padId bga} {
     set isRight  [expr {$padCol == ($cols - 1)}]
 
     set edgePad [expr {$isTop || $isBottom || $isLeft || $isRight}]
-    set edgeescapeDirection [list]
-    if {$isTop}    {lappend edgeescapeDirection "TOP"}
-    if {$isBottom} {lappend edgeescapeDirection "BOTTOM"}
-    if {$isLeft}   {lappend edgeescapeDirection "LEFT"}
-    if {$isRight}  {lappend edgeescapeDirection "RIGHT"}
-    
-    set padContext [dict create \
-                        row $padRow \
-                        col $padCol \
-                        dRow $dRow \
-                        dCol $dCol \
-                        ringDepth $ringDepth\
-                        quadrant $quadrant \
-                        edgePad $edgePad\
-                        edge $edgeescapeDirection]\
-                        
-    return $padContext
-    
-}
-
-proc model::topology::angleToVector {escapeDirection} {
-
-    set rad [expr {$angleDeg * acos(-1) / 180.0}]
-
-    set dx [expr {cos($rad)}]
-
-    set dy [expr {-sin($rad)}] ;# PCB Y-axis inverted
-
-    return [list $dx $dy]
-
-}
-proc model::topology::directionVector {escapeDirection} {
-    switch -- $escapeDirection {
-        N  { return { 0 -1 } }
-        S  { return { 0  1 } }
-        E  { return { 1  0 } }
-        W  { return {-1  0 } }
-        NE { return { 1 -1 } }
-        NW { return {-1 -1 } }
-        SE { return { 1  1 } }
-        SW { return {-1  1 } }
-        default {
-            error "Unknown direction '$escapeDirection'"
-        }
-    }
-}
-
-proc model::topology::orthogonalEscape {padContext} {
-    # Given:
-    #   - pad identity
-    #   - BGA dimensions
-    #   - topology strategy
-
-    # Determine:
-    #   - routing class
-    #   - preferred escape direction
-    #   - topology parameters
-    # offset = laneIndex * lanePitch
-}
-
-proc model::topology::quadrantEscape {padContext} {
-}
-
-
-proc model::topology::calculateAllowedNeckLength {structure bga} {
-    # check for VIPPO Policy
-    if {[dict get $structure policy viaInPad]} { 
-        if {[dict get $structure via type] == "through"} {
-            ui::status::set "warning Via Type set to Through"
-        }
-        set neckLength 0.0
-    } else {
-        if {[dict exists $structure rules neckLength]} {
-            set neckLength [dict get $structure rules neckLength]
-        } else {
-            set spacingRules [dict get $structure spacing] 
-            set viaDef [dict get $structure via]
-            set rules [dict get $viaDef rules]
-            
-            set pitch [dict get $bga pitch]
-            set totalViaDiameter [model::via::totalDiameter $viaDef]
-            set bgaPadDiameter [dict get $bga padDiameter]
-            set viaToPad [dict get $spacingRules viaToPadSpacing]
-            
-            set clearanceRadius [expr {($totalViaDiameter + $bgaPadDiameter)/2.0 + $viaToPad}]
-            
-            set neckLength [expr {$pitch - (($totalViaDiameter + $bgaPadDiameter) / 2.0) - $viaToPad}]
-        }
-    }
-    return $neckLength
-}
-proc model::topology::generateEscapePlan {padContext structure bga} {
-    set neckLength [model::topology::calculateAllowedNeckLength $structure $bga]
-
-
-    # determine escapeDirection
-    set escapeDirection [model::topology::selectEscapeDirection \
-                    $padContext \
-                    $structure \
-                    $bga]
-
-    # # determine lane
-    # set lane [model::topology::selectLane \
-    #                 $padContext \
-    #                 $escapeDirection \
-    #                 $structure \
-    #                 $bga]
+    set edgeDirections [list]
+    if {$isTop}    {lappend edgeDirections N}
+    if {$isBottom} {lappend edgeDirections S}
+    if {$isLeft}   {lappend edgeDirections W}
+    if {$isRight}  {lappend edgeDirections E}
 
     return [dict create \
-                escapeDirection $escapeDirection \
-                neckLength $neckLength]
+        row $padRow \
+        col $padCol \
+        dRow $dRow \
+        dCol $dCol \
+        ringDepth $ringDepth \
+        quadrant $quadrant \
+        edgePad $edgePad \
+        edge $edgeDirections \
+        rows $rows \
+        cols $cols \
+        centerRow $centerRow \
+        centerCol $centerCol]
 }
-# determine escapeDirection cline should exit bga.
+
+# Calculate allowed neck length based on structure rules or via/pad spacing constraints
+proc model::topology::calculateAllowedNeckLength {structure bga} {
+    if {[dict get $structure policy viaInPad]} {
+        if {[dict get $structure via type] == "through"} {
+            # Warning omitted as per instructions
+        }
+        return 0.0
+    }
+    if {[dict exists $structure rules neckLength]} {
+        return [dict get $structure rules neckLength]
+    } else {
+        set spacingRules [dict get $structure spacing]
+        set viaDef [dict get $structure via]
+        set pitch [dict get $bga pitch]
+        set totalViaDiameter [model::via::totalDiameter $viaDef]
+        set bgaPadDiameter [dict get $bga padDiameter]
+        set viaToPad [dict get $spacingRules viaToPadSpacing]
+
+        set clearanceRadius [expr {($totalViaDiameter + $bgaPadDiameter)/2.0 + $viaToPad}]
+        set neckLength [expr {$pitch - (($totalViaDiameter + $bgaPadDiameter)/2.0) - $viaToPad}]
+        return $neckLength
+    }
+}
+
+# Select escape direction based on policy: nearestEdge or quadrant only
 proc model::topology::selectEscapeDirection {padContext structure bga} {
-
-
     set policy [dict get $structure policy escapePolicy]
 
     switch -- $policy {
         nearestEdge {
             return [model::topology::nearestEdgePolicy $padContext $bga]
         }
-
         quadrant {
             return [model::topology::quadrantPolicy $padContext]
         }
-
-        horizontalFirst {
-            return [model::topology::horizontalFirstPolicy $depths]
-        }
-
-        verticalFirst {
-            return [model::topology::verticalFirstPolicy $depths]
-        }
-
         default {
-            error "Unknown escape policy '$policy'"
+            error "Unknown or unsupported escape policy '$policy'"
         }
     }
 }
 
+# Nearest edge policy: select direction with minimum distance to BGA edge
 proc model::topology::nearestEdgePolicy {padContext bga} {
     set row [dict get $padContext row]
     set col [dict get $padContext col]
     set rows [dict get $bga rows]
     set cols [dict get $bga cols]
 
-    set escapeDirectionDepths [list \
+    set distances [list\
         N $row \
         W $col \
         E [expr {($cols - 1) - $col}] \
         S [expr {($rows - 1) - $row}] \
     ]
 
-    set selectedescapeDirection ""
-    set selectedDepth ""
-    foreach {escapeDirection depth} $escapeDirectionDepths {
-        if {$selectedescapeDirection eq "" || $depth < $selectedDepth} {
-            set selectedescapeDirection $escapeDirection
-            set selectedDepth $depth
+    set selectedDirection ""
+    set selectedDistance ""
+    foreach {direction dist} $distances {
+        if {$selectedDirection eq "" || $dist < $selectedDistance} {
+            set selectedDirection $direction
+            set selectedDistance $dist
         }
     }
-
-    return $selectedescapeDirection
+    return $selectedDirection
 }
+
+# Quadrant policy: return quadrant as escape direction
 proc model::topology::quadrantPolicy {padContext} {
     return [dict get $padContext quadrant]
 }
-# determine lane index by depth from the selected BGA edge
-proc model::topology::selectLane {padContext escapeDirection structure bga} {
-    set row [dict get $padContext row]
-    set col [dict get $padContext col]
-    set rows [dict get $bga rows]
-    set cols [dict get $bga cols]
 
+# Map direction string to angle in degrees
+proc model::topology::directionToAngle {escapeDirection} {
     switch -- $escapeDirection {
-        N {
-            set edgeDepth $row
-        }
-
-        S {
-            set edgeDepth [expr {($rows - 1) - $row}]
-        }
-
-        W {
-            set edgeDepth $col
-        }
-
-        E {
-            set edgeDepth [expr {($cols - 1) - $col}]
-        }
-
+        N  { return 270 }
+        S  { return 90 }
+        E  { return 0 }
+        W  { return 180 }
+        NE { return 315 }
+        NW { return 225 }
+        SE { return 45 }
+        SW { return 135 }
         default {
-            error "Unknown escapeDirection: $escapeDirection"
+            error "Unknown direction '$escapeDirection'"
         }
     }
-
-    if {$edgeDepth < 0} {
-        error "Invalid edge depth for row $row col $col in ${rows}x${cols} BGA"
-    }
-
-    return $edgeDepth
-}
-proc model::topology::compileEscapePlan {padName pad padContext structure escapePlan bga} {
-
-    set escapeDirection     [dict get $escapePlan escapeDirection]
-    # set laneId   [dict get $escapePlan laneId]
-    set neckLength [dict get $escapePlan neckLength]
-    set structureName [dict get $structure id]
-    set x [dict get $pad x]
-    set y [dict get $pad y]
-
-    if {[string is double -strict $escapeDirection]} {
-        set v [model::topology::angleToVector $escapeDirection]
-    } else {
-        set v [model::topology::directionVector $escapeDirection]
-    }
-    lassign $v dx dy
-
-    set x1 $x
-
-    set y1 $y
-
-    set x2 [expr {$x + $dx * $neckLength}]
-
-    set y2 [expr {$y + $dy * $neckLength}]
-
-    set neck [dict create \
-        x1 $x1 y1 $y1 x2 $x2 y2 $y2]
-    # --------------------
-    # META
-    # --------------------
-    set meta [dict create \
-        padId $padName \
-        escapeDirection $escapeDirection \
-        structure $structureName \
-        clineWidth [dict get $structure rules traceWidth]]
-
-    # --------------------
-    # OUTPUT (neck only)
-    # --------------------
-    return [dict create \
-        meta $meta \
-        neck $neck]
 }
 
-proc model::topology::applyClineToPad {padName pad bga structureDef} {
+# Calculate channel width available for escape path
+proc model::topology::calculateChannelWidth {pitch ballDiameter clearance} {
+    return [expr {$pitch - $ballDiameter - 2.0 * $clearance}]
+}
 
-    # Fanout IR v1 padClines, completed by model::fanoutCompiler::compile:
-    # padClines = {
-    #     meta {
-    #         padId A1
-    #         escapeDirection N
-    #         laneId 3
-    #         structure basic
-    #     }
-    #     segments {
-    #         neck   {id width angle laneId escapeDirection geometry nodes}
-    #         escape {id width angle laneId escapeDirection geometry nodes}
-    #     }
-    # }
+# Determine if channel width is sufficient for trace width routing
+proc model::topology::isChannelValid {channelWidth traceWidth} {
+    return [expr {$channelWidth >= $traceWidth}]
+}
+
+# Calculate jog angle based on escape angle, ring depth, pitch, ball diameter, trace width, clearance
+proc model::topology::calculatejogAngle {escapeAngle ringDepth pitch ballDiameter traceWidth clearance} {
+    set channelWidth [model::topology::calculateChannelWidth $pitch $ballDiameter $clearance]
+    if {![model::topology::isChannelValid $channelWidth $traceWidth]} {
+        return $escapeAngle
+    }
     
+    set availableWidth [expr {$channelWidth - $traceWidth}]
+    set maxjogOffset [expr {$availableWidth * ($ringDepth + 1)}]
+    if {$maxjogOffset <= 0} {
+        return $escapeAngle
+    }
+    set jogRadians [expr {atan($maxjogOffset / $pitch)}]
+    set jogDegrees [expr {$jogRadians * 180.0 / acos(-1)}]
+
+    # Alternate jog direction by ringDepth parity
+    set jogSign [expr {($ringDepth % 2) == 0 ? 1 : -1}]
+    return [expr {$escapeAngle + $jogSign * $jogDegrees}]
+}
+
+# Generate escape plan dict with angle, neckLength and strategy
+proc model::topology::generateEscapePlan {padContext structure bga} {
+    set neckLength [model::topology::calculateAllowedNeckLength $structure $bga]
+    set escapeDirection [model::topology::selectEscapeDirection $padContext $structure $bga]
+    set escapeAngle [model::topology::directionToAngle $escapeDirection]
+    return [dict create \
+        angle $escapeAngle \
+        neckLength $neckLength \
+        strategy [dict get $structure policy escapePolicy]]
+}
+
+# Plan escape path as ordered list of abstract operations and plan-level metadata
+proc model::topology::planEscapePath {padName pad padContext structure escapePlan bga} {
+    set traceWidth [dict get $structure rules traceWidth]
+    set pitch [dict get $bga pitch]
+    set ballDiameter [dict get $bga padDiameter]
+    set clearance [dict get $structure spacing viaToPadSpacing]
+
+    set escapeAngle [dict get $escapePlan angle]
+    set neckLength [dict get $escapePlan neckLength]
+    set ringDepth [dict get $padContext ringDepth]
+
+    set jogAngle [model::topology::calculatejogAngle $escapeAngle $ringDepth $pitch $ballDiameter $traceWidth $clearance]
+
+    set jogLength [expr {$pitch * 0.75}]
+
+    set channelLength [expr {$pitch * ($ringDepth + 1) * 0.5}]
+
+    set operations [list]
+
+    lappend operations [dict create \
+        id neck1 \
+        type segment \
+        angle $escapeAngle \
+        length $neckLength \
+        width $traceWidth \
+        layer TOP]
+
+    if {$ringDepth > 0} {
+        lappend operations [dict create \
+            id jog1 \
+            type segment \
+            angle $jogAngle \
+            length $jogLength \
+            width $traceWidth \
+            layer TOP]
+    }
+
+    lappend operations [dict create \
+        id escape1 \
+        type segment \
+        angle $escapeAngle \
+        length $channelLength \
+        width $traceWidth \
+        layer TOP]
+
+    return $operations
+}
+
+# Apply cline escape planning to pad, returning planned operations
+proc model::topology::applyClineToPad {padName pad bga structureDef} {
     set structure [model::topology::getStructure $structureDef]
     set padContext [model::topology::classifyPad $pad $bga]
-    
     set escapePlan [model::topology::generateEscapePlan $padContext $structure $bga]
-    set padCline [model::topology::compileEscapePlan \
-        $padName $pad $padContext $structure $escapePlan $bga]
-    return $padCline
-
+    return [model::topology::planEscapePath $padName $pad $padContext $structure $escapePlan $bga]
 }

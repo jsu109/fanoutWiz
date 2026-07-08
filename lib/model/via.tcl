@@ -57,11 +57,16 @@ proc model::via::checkStructurePolicies {padContext structure} {
     } else {
         return 1}
 }
-proc model::via::createForPad {padId padClines padContext structure} {
+proc model::via::createForPad {padId escapePath padContext structure} {
     set viaDef [model::via::definitionFromStructure $structure]
     set rules [dict get $viaDef rules]
-    set neckGeometry [dict get $padClines neck]
+
+    set segments [dict get $escapePath segments]
+    set lastSegmentId [lindex [dict keys $segments] end]
+    set segmentGeometry [dict get $segments $lastSegmentId geometry]
+
     set diameter [model::via::totalDiameter $viaDef]
+
     if {[model::via::checkStructurePolicies $padContext $structure]} {
         return [dict create \
             id "$padId.via" \
@@ -71,13 +76,15 @@ proc model::via::createForPad {padId padClines padContext structure} {
             annularRing [dict get $rules annularRing] \
             diameter $diameter \
             geometry [dict create \
-                x [dict get $neckGeometry x2] \
-                y [dict get $neckGeometry y2] \
+                x [dict get $segmentGeometry x2] \
+                y [dict get $segmentGeometry y2] \
                 radius [expr {$diameter / 2.0}]] \
             nodes [dict create \
                 from "$padId.escape.exit" \
                 to "$padId.via"]]
     }
+
+    return {}
 }
 
 proc model::via::collectFromFanout {fanout} {
@@ -86,8 +93,8 @@ proc model::via::collectFromFanout {fanout} {
 
     foreach padId [dict keys $pads] {
         set pad [dict get $pads $padId]
-        if {[dict exists $pad via]} {
-            dict set vias $padId [dict get $pad via]
+        if {[dict exists $pad vias]} {
+            dict set vias $padId [dict get $pad vias]
         }
     }
 

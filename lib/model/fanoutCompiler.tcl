@@ -29,51 +29,174 @@ proc model::fanoutCompiler::segmentAngle {geometry} {
     return [expr {atan2($dy, $dx) * 180.0 / acos(-1)}]
 }
 
-proc model::fanoutCompiler::compileSegment {padId segName geometry width escapeDirection meta} {
-    model::fanoutCompiler::requireExactKeys "pad $padId segment $segName geometry" \
-        $geometry {x1 y1 x2 y2}
+# FIX: "layer" is required and returned again — it was being silently
+# dropped, which would have been invisible until something downstream
+# needed to know what layer a segment was on.
+proc model::fanoutCompiler::compileSegment {padId segment} {
+    puts "padId: $padId, segment: $segment"
+    model::fanoutCompiler::requireKeys \
+        "pad $padId segment" \
+        $segment {id type width layer geometry}
+
+    set geometry [dict get $segment geometry]
 
     return [dict create \
-        id $segName \
-        width $width \
-        angle [model::fanoutCompiler::segmentAngle $geometry] \
-        escapeDirection $escapeDirection \
-        geometry $geometry \
-        nodes [dict create \
-            from $padId \
-            to "$padId.$segName.exit" \
-        ] \
+        id       [dict get $segment id] \
+        type     [dict get $segment type] \
+        width    [dict get $segment width] \
+        layer    [dict get $segment layer] \
+        angle    [model::fanoutCompiler::segmentAngle $geometry] \
+        geometry $geometry]
+}
+
+# unchanged — this one was already correct
+proc model::fanoutCompiler::compileVia {padId via} {
+    model::fanoutCompiler::requireExactKeys \
+        "pad $padId via [dict get $via id]" \
+        $via {id viaTypeId location fromLayer toLayer padstack}
+
+    return [dict create \
+        id        [dict get $via id] \
+        viaTypeId [dict get $via viaTypeId] \
+        location  [dict get $via location] \
+        fromLayer [dict get $via fromLayer] \
+        toLayer   [dict get $via toLayer] \
+        padstack  [dict get $via padstack] \
     ]
 }
 
-proc model::fanoutCompiler::compile {fanout} {
-    set padClines {}
-    set pads [dict get $fanout pads]
+# unchanged — still generic over an arbitrary ordered sequence
+proc model::fanoutCompiler::chainNodes {padId compiledSegments compiledVias} {
+    set nodes {}
+    set previous $padId
+    foreach seg $compiledSegments {
+        set exitId "$padId.[dict get $seg id].exit"
+        dict set nodes [dict get $seg id] [dict create from $previous to $exitId]
+        set previous $exitId
+    }
+    foreach via $compiledVias {
+        set exitId "$padId.[dict get $via id].exit"
+        dict set nodes [dict get $via id] [dict create from $previous to $exitId]
+        set previous $exitId
+    }
+    return [dict create nodes $nodes final $previous]
+}
 
-    foreach padId [dict keys $pads] {
-        set p [dict get $pads $padId]
-        model::fanoutCompiler::requireKeys "pad $padId" $p {clines}
+proc model::fanoutCompiler::compileEscapePath {padId escapePath} {
+    puts "escapePath: $escapePath"
+    model::fanoutCompiler::requireKeys "escapePath" \
+        $escapePath {padRef startPad operations}
+    # todo: get the position for first seg using the padRef and the padContext
+    set position [dict get $escapePath startPad]
+    set currentLayer TOP
+    set compiledSegments {}
+    set compiledVias {}
 
-        set rawPadClines [dict get $p clines]
-        model::fanoutCompiler::requireExactKeys "pad $padId padClines" \
-            $rawPadClines {meta neck}
+    foreach operation [dict get $escapePath operations] {
+        set type [dict get $operation type]
 
-        set meta [dict get $rawPadClines meta]
-        model::fanoutCompiler::requireKeys "pad $padId padClines meta" \
-            $meta { escapeDirection clineWidth}
+        switch $type {
+            segment {
+                set angle [dict get $operation angle]
+                set length [dict get $operation length]
+                set width [dict get $operation width]
 
-        
-        set width [dict get $meta clineWidth]
+                set radians [expr {$angle * acos(-1) / 180.0}]
+                set x1 [dict get $position x]
+                set y1 [dict get $position y]
+                set x2 [expr {$x1 + $length * cos($radians)}]
+                set y2 [expr {$y1 + $length * sin($radians)}]
 
-        set compiledSegments [dict create \
-            neck [model::fanoutCompiler::compileSegment \
-                $padId neck [dict get $rawPadClines neck] $width \
-                [dict get $meta escapeDirection] [dict get $meta]] \
-        ]
+                set segment [dict create \
+                    id [dict get $operation id] \
+                    type segment \
+                    width $width \
+                    layer [dict get $operation layer] \
+                    angle $angle \
+                    geometry [dict create \
+                        x1 $x1 y1 $y1 \
+                        x2 $x2 y2 $y2]]
 
-        dict set padClines $padId meta $meta
-        dict set padClines $padId segments $compiledSegments
+                lappend compiledSegments $segment
+                set position [dict create x $x2 y $y2]
+                set currentLayer [dict get $operation layer]
+            }
+
+            via {
+                # Via compilation will be added when via operations are introduced.
+                lappend compiledVias [dict create \
+                    id [dict get $operation id] \
+                    location $position]
+            }
+
+            default {
+                error "Unknown escape operation type: $type"
+            }
+        }
     }
 
-    return $padClines
+    set chain [model::fanoutCompiler::chainNodes $padId $compiledSegments $compiledVias]
+
+    return [dict create \
+        padRef   [dict get $escapePath padRef] \
+        segments $compiledSegments \
+        vias     $compiledVias \
+        nodes    [dict get $chain nodes] \
+        endpoint $position ]
+}
+
+# NEW: pulled out of compile() so the migration bridge has a name, a
+# comment explaining its lifespan, and can be deleted in one place once
+# model::structure::createStructure emits EscapePath[] natively.
+#
+# FIX: "status" now defaults to "ok" instead of hard-requiring the key —
+# legacy pad data may predate the status concept entirely.
+#
+# TODO: remove this proc (and its call site in compile()) once
+# createStructure no longer produces the row/col/position/clines/via shape.
+proc model::fanoutCompiler::legacyPadToEscapePath {padId padData} {
+    if {[dict exists $padData clines status]} {
+        set status [dict get $padData clines status]
+    } else {
+        set status ok
+    }
+
+    set escapePath [dict create \
+        padRef   $padId \
+        startPad [dict get $padData position] \
+        segments [dict get $padData clines segments] \
+        vias     {} \
+        endpoint [dict get $padData clines endpoint] \
+        status   $status \
+    ]
+
+    if {[dict exists $padData via]} {
+        set via [dict get $padData via]
+        dict set escapePath vias [dict create [dict get $via id] $via]
+    }
+
+    return $escapePath
+}
+
+
+proc model::fanoutCompiler::compile {fanout} {
+    set compiled {}
+
+    # Support structure output where pads still contain
+    # row/col/position/clines/via and convert it into EscapePath IR.
+    if {[dict exists $fanout pads]} {
+        set fanout [dict get $fanout pads]
+    }
+
+    foreach padId [dict keys $fanout] {
+        set padData [dict get $fanout $padId]
+        if {[dict exists $padData clines]} {
+            set escapePath [model::fanoutCompiler::legacyPadToEscapePath $padId $padData]
+        } else {
+            set escapePath $padData
+        }
+        dict set compiled $padId \
+            [model::fanoutCompiler::compileEscapePath $padId $escapePath]
+    }
+    return $compiled
 }

@@ -37,10 +37,10 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
         set oy $::view::offsetY
     }
 
-    dict for {padId padClines} $segs {
-        set segments [dict get $padClines segments]
+    dict for {padId escapePath} $segs {
+        set segments [dict get $escapePath segments]
 
-        dict for {segName segment} $segments {
+        foreach segment $segments {
             set geom [dict get $segment geometry]
 
             set x1 [dict get $geom x1]
@@ -65,7 +65,7 @@ proc render::clineSeg::drawClineSegs {canvas frame} {
                 $x1 $y1 $x2 $y2 \
                 -fill $color \
                 -width $segWidth \
-                 -tags [list feature:${padId}.segment seg] \
+                -tags [list feature:${padId}.segment seg]
         }
     }
 }

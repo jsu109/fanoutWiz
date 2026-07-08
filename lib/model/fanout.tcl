@@ -1,5 +1,18 @@
 namespace eval model::fanout {}
 
+proc model::fanout::getEscapeEndpoint {segments via} {
+    if {[dict exists $via geometry x] && [dict exists $via geometry y]} {
+        return [dict create \
+            x [dict get $via geometry x] \
+            y [dict get $via geometry y]]
+    }
+
+    set lastSeg [lindex [dict keys $segments] end]
+    return [dict create \
+        x [dict get $segments $lastSeg geometry x2] \
+        y [dict get $segments $lastSeg geometry y2]]
+}
+
 proc model::fanout::resolveStructureName {structureName} {
     if {[catch {dict exists $structureName id} hasId] == 0 && $hasId} {
         return [dict get $structureName id]
@@ -32,16 +45,19 @@ proc model::fanout::createFanout {bga {structureName basic}} {
         set col [dict get $id col]
         set padClines [model::topology::applyClineToPad $padId $id $bga $structure]
         set padContext [model::topology::classifyPad $id $bga]
-        set via [model::via::createForPad $padId $padClines $padContext $structure]
+        # set via [model::via::createForPad $padId $padClines $padContext $structure]
         
         # ---------------------------------------
         # BUILD FANOUT IR
         # ---------------------------------------
-        dict set fanoutPads $padId row $row
-        dict set fanoutPads $padId col $col
-        dict set fanoutPads $padId position [dict create x $x y $y]
-        dict set fanoutPads $padId clines $padClines
-        dict set fanoutPads $padId via $via
+        # vias [list $via]
+        set escapePath [dict create \
+            padRef $padId \
+            startPad [dict create x $x y $y] \
+            operations $padClines \
+            
+            ]
+        dict set fanoutPads $padId $escapePath
     }
 
     return [dict create \
