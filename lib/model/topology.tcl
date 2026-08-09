@@ -155,27 +155,34 @@ proc model::topology::calculateChannelWidth {pitch ballDiameter clearance} {
 
 # Determine if channel width is sufficient for trace width routing
 proc model::topology::isChannelValid {channelWidth traceWidth} {
+    puts "Channel width: $channelWidth, Trace width: $traceWidth"
     return [expr {$channelWidth >= $traceWidth}]
 }
 
 # Calculate jog angle based on escape angle, ring depth, pitch, ball diameter, trace width, clearance
-proc model::topology::calculatejogAngle {escapeAngle ringDepth pitch ballDiameter traceWidth clearance} {
+proc model::topology::calculatejogAngle {escapeAngle ringDepth pitch ballDiameter traceLength traceWidth clearance} {
     set channelWidth [model::topology::calculateChannelWidth $pitch $ballDiameter $clearance]
+    
     if {![model::topology::isChannelValid $channelWidth $traceWidth]} {
         return $escapeAngle
     }
     
     set availableWidth [expr {$channelWidth - $traceWidth}]
-    set maxjogOffset [expr {$availableWidth * ($ringDepth + 1)}]
+    set maxjogOffset [expr {$pitch / 2}]
+    # [expr {$availableWidth * ($ringDepth + 1)}]
+    puts "Available width: $availableWidth, Max jog offset: $maxjogOffset"
     if {$maxjogOffset <= 0} {
         return $escapeAngle
     }
     set jogRadians [expr {atan($maxjogOffset / $pitch)}]
-    set jogDegrees [expr {$jogRadians * 180.0 / acos(-1)}]
+    set jogDegrees [expr {90 - $jogRadians * 180.0 / acos(-1)}]
+    set ringIndex [expr {int($ringDepth)}]
 
     # Alternate jog direction by ringDepth parity
-    set jogSign [expr {($ringDepth % 2) == 0 ? 1 : -1}]
-    return [expr {$escapeAngle + $jogSign * $jogDegrees}]
+    set jogSign [expr {($ringIndex % 2) == 0 ? 1 : -1}]
+    set jogAngle [expr {$escapeAngle + $jogSign * $jogDegrees}]
+    puts "Calculated jog angle: $jogAngle (escape angle: $escapeAngle, ring depth: $ringDepth, max jog offset: $maxjogOffset)"
+    return $jogAngle
 }
 
 # Generate escape plan dict with angle, neckLength and strategy
@@ -200,9 +207,9 @@ proc model::topology::planEscapePath {padName pad padContext structure escapePla
     set neckLength [dict get $escapePlan neckLength]
     set ringDepth [dict get $padContext ringDepth]
 
-    set jogAngle [model::topology::calculatejogAngle $escapeAngle $ringDepth $pitch $ballDiameter $traceWidth $clearance]
+    set jogAngle [model::topology::calculatejogAngle $escapeAngle $ringDepth $pitch $ballDiameter $neckLength $traceWidth $clearance]
 
-    set jogLength [expr {$pitch * 0.75}]
+    set jogLength [expr {$pitch * 0.5}]
 
     set channelLength [expr {$pitch * ($ringDepth + 1) * 0.5}]
 

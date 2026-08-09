@@ -83,7 +83,6 @@ proc model::fanoutCompiler::chainNodes {padId compiledSegments compiledVias} {
 }
 
 proc model::fanoutCompiler::compileEscapePath {padId escapePath} {
-    puts "escapePath: $escapePath"
     model::fanoutCompiler::requireKeys "escapePath" \
         $escapePath {padRef startPad operations}
     # todo: get the position for first seg using the padRef and the padContext
